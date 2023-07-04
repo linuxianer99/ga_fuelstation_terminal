@@ -46,3 +46,8 @@ This state sends the data of the refueling to the cloud
 
 
 ## Pin description
+
+
+https://github.com/smford/eeh-esp32-rfid
+
+https://github.com/ayushsharma82/AsyncElegantOTA
