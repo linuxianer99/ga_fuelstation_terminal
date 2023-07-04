@@ -1,0 +1,11 @@
+void lcd_init();
+void lcd_WaitForTransponder();
+void lcd_WelcomeMessage();
+void lcd_ConnectingWIFI();
+void lcd_ShowIP(const char*);
+void lcd_UpdateStatus(t_refueling, t_terminalStatus);
+void lcd_ShowAircraft(t_refueling);
+void lcd_UpdateFuelCount(t_refueling);
+void lcd_ShowCount();
+void lcd_SendData();
+void lcd_SendDataResult(int);
