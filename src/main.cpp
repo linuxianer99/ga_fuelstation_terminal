@@ -1,5 +1,25 @@
 #include <Arduino.h>
 #include <config.h>
+#include <main.h>
+#include <string.h>
+#include <Wire.h>
+
+#include <lcd.h>
+#include <LiquidCrystal_I2C.h>
+
+#include <EthernetENC.h>
+#include <WiFi.h>
+
+#include <HttpClient.h>
+
+#include "filesystem.h"
+#include <LittleFS.h>
+#include "webserver.h"
+#include "buzzer.h"
+
+#include <driver/pcnt.h>
+
+#include "billing_cloud.h"
 
 #include <MFRC522v2.h>
 #include <MFRC522DriverSPI.h>
@@ -7,84 +27,499 @@
 #include <MFRC522DriverPinSimple.h>
 #include <MFRC522Debug.h>
 
-MFRC522DriverPinSimple ss_pin(5); // Configurable, see typical pin layout above.
+#define FIRMWARE_VERSION "1.0"
+
+// Enter a MAC address for your controller below.
+// Newer Ethernet shields have a MAC address printed on a sticker on the shield
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+
+// Set the static IP address to use if the DHCP fails to assign
+IPAddress MYIPADDR(192, 168, 1, 28);
+IPAddress MYIPMASK(255,255,255,0);
+IPAddress MYDNS(192, 168, 1, 254);
+IPAddress MYGW(192, 168, 1, 254);
+
+
+MFRC522DriverPinSimple ss_pin(10); // Configurable, see typical pin layout above.
 
 MFRC522DriverSPI driver{ss_pin}; // Create SPI driver.
 //MFRC522DriverI2C driver{}; // Create I2C driver.
 MFRC522 mfrc522{driver};  // Create MFRC522 instance.
 
+t_terminalStates TerminalState = WAIT_CARD_ENTRY;
+t_terminalStatus TerminalStatus;
+t_refueling Refueling;
+t_chipcard chipcard;
+
+//create counter object
+//PulseCounter pc0;
+
+bool shouldReboot = false; 
+
+// Setup Webserver
+// initialise webserver
+AsyncWebServer server(80);
+
+// used for loading and saving configuration data
+const char *filename = "/config.json";
+t_Config Config;
+
+
+void initWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(Config.ssid.c_str(), Config.wifipassword.c_str());
+  ESP_LOGD("WIFI", "Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    ESP_LOGD("WIFI", ".");
+    delay(1000);
+  }
+  TerminalStatus.wifi=1;
+  ESP_LOGD("WIFI", "Local IP:", WiFi.localIP().toString());
+}
+
+void checkWifi(t_terminalStatus *ts) {
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    ts->wifi=1;
+  }
+  else
+  {
+    ts->wifi=0;
+  }
+}
+
+
+void initLAN() {
+  
+  ESP_LOGD("LAN", "Init Ethernet ...");
+
+  // Reset LAN Chip
+  pinMode(4, OUTPUT);
+  digitalWrite(4, 0);
+  delay(10);
+  digitalWrite(4,1);
+
+  Ethernet.init(7);  // Most Arduino shields
+
+  // try to configure using IP address instead of DHCP:
+  //Ethernet.begin(mac, ip, myDns);
+  Ethernet.begin(mac, MYIPADDR, MYDNS, MYGW, MYIPMASK);
+
+  // Check for Ethernet Hardware
+  if (Ethernet.hardwareStatus() == EthernetNoHardware)
+  {
+    ESP_LOGD("LAN", "Check Ethernet HARDWARE");
+  }
+
+  if (Ethernet.linkStatus() == LinkOFF)
+  {
+    ESP_LOGD("LAN", "No Link! Check network cable");
+  }
+  
+  // give the Ethernet shield a second to initialize:
+  delay(1000);
+
+  ESP_LOGD("LAN", "IP: ", Ethernet.localIP());
+
+}
+
+void initIO() {
+  
+  init_buzzer();
+
+  // Setup IO
+  pinMode(PUMP_RELAIS, OUTPUT);
+  pinMode(PUMP_LED, OUTPUT);
+
+  // // Setup pulse counter
+  // pc0.initialise(PUMP_PULSE ,PCNT_PIN_NOT_USED);
+  // pc0.set_mode(PCNT_COUNT_DIS,PCNT_COUNT_INC,PCNT_MODE_KEEP,PCNT_MODE_KEEP);
+  // // set glich filter to ignore pulses less than 1000 x 2.5ns
+  // pc0.set_filter_value(1000);
+  
+  // // clear and restart the counter
+  // pc0.clear();
+  // pc0.pause();
+
+  pcnt_config_t pcntFreqConfig = {                         // Instancia do Contador de Pulsos
+    .pulse_gpio_num = PUMP_PULSE, 
+    .ctrl_gpio_num = PCNT_PIN_NOT_USED,
+    .lctrl_mode = PCNT_MODE_KEEP,
+    .hctrl_mode = PCNT_MODE_KEEP,
+    .pos_mode = PCNT_COUNT_DIS,
+    .neg_mode = PCNT_COUNT_INC,
+    .counter_h_lim = 32767,
+    .counter_l_lim = -32768,
+    .unit = PCNT_UNIT_0,
+    .channel = PCNT_CHANNEL_0,
+  };
+  int result;
+  result=pcnt_unit_config(&pcntFreqConfig);
+  ESP_LOGD("PCNT", "%d", result);                         // configura os registradores do Contador de Pulsos
+
+  
+  pcnt_counter_clear(PCNT_UNIT_0);                        // Zera e reseta o Contador de Pulsos
+
+  //pcnt_counter_resume(PCNT_UNIT_0);                       // reinicia o Contador de Pulsos
+}
+
+void io_UpdateStatus(t_terminalStatus ts)
+{
+  // Update Pump LED
+  if (ts.pump)
+  {
+    digitalWrite(PUMP_LED, 1);
+    digitalWrite(PUMP_RELAIS, 1);
+  }
+  else
+  {
+    digitalWrite(PUMP_LED, 0);
+    digitalWrite(PUMP_RELAIS, 0);
+  }
+    
+}
+
+void updateStatus(void * paramter)
+{
+  for(;;)
+  {
+    checkConnection(&TerminalStatus);
+    //checkWifi(&TerminalStatus);
+    log_i("Update Status");
+    unsigned int temp = uxTaskGetStackHighWaterMark(nullptr);
+    log_i("Stack: %d", temp);
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+  }
+}
+
 void setup() {
 
   Serial.begin(115200); // Initialize serial communications with the PC for debugging.
-  while (!Serial);      // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4).
+
+  init_FS();
+
+  log_i("Loading Configuration ...");
+  loadConfiguration(filename, Config);
+  printConfig(Config);
+
+  // GPIOs
+  initIO();
+
+  lcd_init();
+  lcd_WelcomeMessage();
+  beep(1000);
+
+  delay(1000);
+
+  // Try to connect terminal to network
+  lcd_ConnectingWIFI();
+  initWiFi();
+  //initLAN();
+  String localIP = WiFi.localIP().toString();
+  
+  lcd_ShowIP(localIP.c_str());
+  delay(2000);
+
+  configureWebServer(&server);
+
+  // Init Card reader
   mfrc522.PCD_Init();   // Init MFRC522 board.
   MFRC522Debug::PCD_DumpVersionToSerial(mfrc522, Serial);	// Show details of PCD - MFRC522 Card Reader details.
-	Serial.println(F("Scan PICC to see UID, SAK, type, and data blocks..."));
+
+  // Create Monitor Task
+  xTaskCreatePinnedToCore(
+    updateStatus,    // Function that should be called
+    "Update Status",   // Name of the task (for debugging)
+    3000,            // Stack size (bytes)
+    NULL,            // Parameter to pass
+    1,               // Task priority
+    NULL,             // Task handle
+    0  // Core to run on
+  );
 }
 
-void handle_chipcard()
-{
-
-}
-
-int read_aircraft()
+bool handle_chipcard(t_chipcard *cc)
 {
   
-}
-
-void loop() {
+  // Check if card is present ...
   if ( !mfrc522.PICC_IsNewCardPresent()) {
-		return;
+	  return false;
 	}
+  
+  ESP_LOGD("SC", "Card Detected");
 
 	// Select one of the cards.
 	if ( !mfrc522.PICC_ReadCardSerial()) {
-		return;
+	 	return false;
 	}
-  
-  //MFRC522Debug::PICC_DumpToSerial(mfrc522, Serial, &(mfrc522.uid));
 
-  Serial.println(F("**Card Detected:**"));
- 
-  MFRC522::MIFARE_Key key;
-  for (byte i = 0; i < 6; i++) 
-    key.keyByte[i] = 0xFF;
   
-  byte buffer1[18];
+  // Access the card and read aircraft and suffix
+  MFRC522::MIFARE_Key key;
+  // generate key ... TODO: This has to be coded new
+  for (byte i = 0; i < 6; i++) 
+     key.keyByte[i] = 0xFF;
+  
+  MFRC522::StatusCode status;
+  byte buffer[18];
+  byte hash[32];
   byte block;
   byte len;
-  MFRC522::StatusCode status;
 
-  
-  // Read aircraft callsign
-  block = BLOCK_AIRCRAFT;
-  len = 18;
+  // Dump debug info about the card; PICC_HaltA() is automatically called.
+  //MFRC522Debug::PICC_DumpToSerial(mfrc522, Serial, &(mfrc522.uid));
 
+  // Authenticate to PICC for Aircraft and Article
   status = mfrc522.PCD_Authenticate(MFRC522::PICC_Command::PICC_CMD_MF_AUTH_KEY_A, BLOCK_AIRCRAFT, &key, &(mfrc522.uid));
   if (status != MFRC522::StatusCode::STATUS_OK) {
-    Serial.print(F("Authentication failed: "));
-    return;
+    ESP_LOGD("SC", "Authentication failed: block AIRCRAFT ");
+    return false;
   }
 
-  status = mfrc522.MIFARE_Read(block, buffer1, &len);
+  // Read aircraft callsign
+  block=BLOCK_AIRCRAFT;
+  len=BLOCK_LEN_AIRCRAFT;
+
+  status = mfrc522.MIFARE_Read(block, buffer, &len);
   if (status != MFRC522::StatusCode::STATUS_OK) {
-    Serial.print(F("Reading failed: "));
-    return;
+    ESP_LOGD("SC", "Reading falied: aircraft");
+    return false;
   }
-  
-  // Dump String
-  Serial.print(F("Aircraft: "));
-  for (uint8_t i = 0; i < 6; i++)
+
+  // Write data to Refueling struct
+  strcpy(cc->aircraft, (char*)buffer);
+
+  // Read suffix
+  block=BLOCK_SUFFIX;
+  len=BLOCK_LEN_SUFFIX;
+
+  status = mfrc522.MIFARE_Read(block, buffer, &len);
+  if (status != MFRC522::StatusCode::STATUS_OK) {
+    ESP_LOGD("SC", "Reading failed: suffix");
+    return false;
+  }
+
+  // Write data to Refueling struct
+  strcpy(cc->suffix, (char*)buffer);
+
+
+  // Authenticate to PICC for memberid
+  status = mfrc522.PCD_Authenticate(MFRC522::PICC_Command::PICC_CMD_MF_AUTH_KEY_A, BLOCK_MEMBERID, &key, &(mfrc522.uid));
+  if (status != MFRC522::StatusCode::STATUS_OK) {
+    ESP_LOGD("SC", "Authentication failed: block AIRCRAFT ");
+    return false;
+  }
+
+  // Read aircraft callsign
+  block=BLOCK_MEMBERID;
+  len=BLOCK_LEN_MEMBERID;
+
+  status = mfrc522.MIFARE_Read(block, buffer, &len);
+  if (status != MFRC522::StatusCode::STATUS_OK) {
+    ESP_LOGD("SC", "Reading falied: aircraft");
+    return false;
+  }
+
+  // Write data to Refueling struct
+  strcpy(cc->memberid, (char*)buffer);
+
+
+  status = mfrc522.PCD_Authenticate(MFRC522::PICC_Command::PICC_CMD_MF_AUTH_KEY_A, BLOCK_HASH, &key, &(mfrc522.uid));
+  if (status != MFRC522::StatusCode::STATUS_OK) {
+    ESP_LOGD("SC", "Authentication failed: block HASH");
+    return false;
+  }
+
+  // Read Hash
+  block=BLOCK_HASH;
+  len=BLOCK_LEN_HASH;
+
+  status = mfrc522.MIFARE_Read(block, buffer, &len);
+  if (status != MFRC522::StatusCode::STATUS_OK) {
+    ESP_LOGD("SC", "Reading failed: hash");
+    return false;
+  }
+
+  // Save first half of the hash
+  int i;
+  for (i=0; i<16;i++)
   {
-    Serial.write(buffer1[i]);
+    hash[i] = buffer[i];
   }
-  
-  Serial.print(" ");
 
-  Serial.println(F("\n**End Reading**\n"));
+  status = mfrc522.MIFARE_Read(block+1, buffer, &len);
+  if (status != MFRC522::StatusCode::STATUS_OK) {
+    ESP_LOGD("SC", "Reading failed: hash");
+    return false;
+  }
+ 
+  // Save second half of the hash
+  for (i=0; i<16;i++)
+  {
+    hash[i+16] = buffer[i];
+  }
 
-  delay(1000); //change value if you want to read cards faster
-
-  mfrc522.PICC_HaltA();
+  // Close PICC
   mfrc522.PCD_StopCrypto1();
+  mfrc522.PICC_HaltA();
+
+  // Print info for debug
+  ESP_LOGI("SC", "Got Transponder: Aircraft: %s, Suffix: %s, MemberID: %s", cc->aircraft, cc->suffix, cc->memberid);
+  //snprintf((char*)hash, 32, "%x", (char*)buffer);
+  ESP_LOGI("SC", "Hash: %x", buffer);
+  
+  // Give the user a beep as acknowledge
+  beep(500);
+
+return true;
+
+}
+
+void loop() {
+
+  static int sm_counter=0;
+  static int state_delay=0;
+  static int httpResult;
+
+  switch(TerminalState) {
+    case WAIT_CARD_ENTRY:
+      ESP_LOGD("SM", "Entered state WAITCARD");
+      lcd_WaitForTransponder();
+      TerminalState=WAIT_CARD;
+    break;
+
+    case WAIT_CARD:
+    
+      if (handle_chipcard(&chipcard))
+      {
+        // a valid chipcard was read
+        ESP_LOGD("SM", "Chip card read");
+
+        // Create current refueling object
+        strcpy(Refueling.aircraft, chipcard.aircraft);
+        strcpy(Refueling.memberid, chipcard.memberid);
+        strcpy(Refueling.article, Config.fuelsort.c_str());
+        strcat(Refueling.article, chipcard.suffix);
+
+        Refueling.amount = 0.0;
+
+        // Print info for debug
+        ESP_LOGI("SM", "Create Refueling: Aircraft: %s, MemberID: %s, Article: %s, Amount: %f", \
+          Refueling.aircraft, Refueling.memberid, Refueling.article, Refueling.amount);
+
+        // Jump to next state
+        TerminalState = COUNT_FUEL_ENTRY;
+        ESP_LOGD("SM", "Transition: -> COUNTFUEL");
+      }
+      break;
+
+    case COUNT_FUEL_ENTRY:
+      ESP_LOGD("SM", "Entered state COUNTFUEL");
+      lcd_ShowAircraft(Refueling);
+      lcd_ShowCount();
+      state_delay=20;
+      TerminalState=COUNT_FUEL;
+    break;
+
+    case COUNT_FUEL:
+      
+      // clear and restart the counter
+      //pcnt_counter_pause(PCNT_UNIT_0);
+      //pcnt_counter_clear(PCNT_UNIT_0);
+      //pcnt_counter_resume(PCNT_UNIT_0);
+
+      // Turn on fuel pump
+      TerminalStatus.pump=1;
+
+      // Count fuel 
+      // insert code here
+      Refueling.amount= Refueling.amount + 0.05;
+      
+      int16_t amount;
+      pcnt_get_counter_value(PCNT_UNIT_0, &amount);
+      ESP_LOGD("SM", "count %d", amount);
+      
+      lcd_UpdateFuelCount(Refueling);
+
+      // check for chipcard
+      if (state_delay > 0){
+        // handle state delay
+        state_delay--;
+      }
+      else {
+        if (handle_chipcard(&chipcard))
+        {
+          // a valid chipcard was read
+          ESP_LOGD("SM", "Chip card read");
+
+          // Change State
+          TerminalState=SEND_DATA_ENTRY;
+        }
+      }
+      
+    break;
+
+    case SEND_DATA_ENTRY:
+
+      // Turn off fuel pump
+      TerminalStatus.pump=0;
+      //pc0.pause();
+      ESP_LOGD("SM", "Entered state SENDDATA");
+      
+      // Update LCD
+      lcd_SendData();
+      // Change State
+      TerminalState=SEND_DATA;
+    break;
+
+    case SEND_DATA:
+
+      // Send Data to Cloud
+      httpResult = SendRefueling(Refueling);
+      log_d("HTTP Response %d", httpResult);
+      ESP_LOGD("SM", "Data sent to Cloud");
+      // Change State
+      TerminalState=SHOW_SUMMARY_ENTRY;
+    break;
+
+    case SHOW_SUMMARY_ENTRY:
+    ESP_LOGD("SM", "SHOW_SUMMARY_ENTRY");
+    // Show LCD Message
+    if (httpResult == 200){
+      lcd_SendDataResult(httpResult);
+    }
+    else{
+      lcd_SendDataResult(httpResult);
+      while(1);
+    }
+    state_delay=50;
+    
+      // Change State
+      TerminalState=SHOW_SUMMARY;
+    break;
+      
+
+    case SHOW_SUMMARY:
+      if (state_delay > 0){
+        state_delay--;
+      }
+      else{
+        // Change State
+        TerminalState=WAIT_CARD_ENTRY;
+      }
+    break;
+  }
+
+  //log_i("Loop running on core: %d", xPortGetCoreID());
+  io_UpdateStatus(TerminalStatus);
+  lcd_UpdateStatus(Refueling, TerminalStatus);
+  //delay(500); //change value if you want to read cards faster
+  
+  if (shouldReboot)
+  {
+    ESP.restart();
+  }
+
+  delay(100);
+  
 }
