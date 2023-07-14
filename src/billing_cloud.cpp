@@ -55,11 +55,11 @@ int SendRefueling(t_refueling Refueling)
     
     while (retry_count)
     {
-        log_i("Try to connect billing server %s", Config.billingserverURL.c_str() + Config.terminal_id);
+        log_i("Try to connect billing server %s", Config.billingserver.c_str() + Config.terminal_id);
         // Handle retry counter
         retry_count--;
         // Try http POST
-        http.begin(Config.billingserverURL + "/" + Config.terminal_id);
+        http.begin(Config.billingserver + "/" + Config.terminal_id);
         http.addHeader("Content-Type", "application/json");
         httpResponseCode = http.POST(requestBody);
         log_i("Server Respone %d", httpResponseCode);
@@ -79,7 +79,7 @@ int SendRefueling(t_refueling Refueling)
 void checkConnection(t_terminalStatus *ts) {
     HTTPClient http;
     
-    http.begin(Config.billingserverURL + "/" + Config.terminal_id + "/ping");
+    http.begin(Config.billingserver + "/" + Config.terminal_id + "/ping");
     // Send HTTP GET request
     int httpResponseCode = http.GET();
     log_i("Server Respone %d", httpResponseCode);

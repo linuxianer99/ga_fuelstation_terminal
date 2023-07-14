@@ -2,6 +2,8 @@
 #define MAIN_H
 
 enum t_terminalStates {
+  OFFLINE_ENTRY, // Terminal is OFFLINE
+  OFFLINE, // Terminal is OFFLINE
   WAIT_CARD_ENTRY, // Wait for a valid RFID card to be presented ENTRY STATE 
   WAIT_CARD, // Wait for a valid RFID card to be presented
   COUNT_FUEL_ENTRY, // Count the fuel through the flow meter
@@ -23,6 +25,7 @@ typedef struct  {
   int pump;
   int connected;
   int wifi; 
+  char s_IP[16];
 } t_terminalStatus;
 
 typedef struct {

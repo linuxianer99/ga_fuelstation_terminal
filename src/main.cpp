@@ -18,6 +18,7 @@
 #include "buzzer.h"
 
 #include <driver/pcnt.h>
+#include "soc/pcnt_struct.h"
 
 #include "billing_cloud.h"
 
@@ -31,13 +32,13 @@
 
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
-byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+//byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
 // Set the static IP address to use if the DHCP fails to assign
-IPAddress MYIPADDR(192, 168, 1, 28);
-IPAddress MYIPMASK(255,255,255,0);
-IPAddress MYDNS(192, 168, 1, 254);
-IPAddress MYGW(192, 168, 1, 254);
+//IPAddress MYIPADDR(192, 168, 1, 28);
+//IPAddress MYIPMASK(255,255,255,0);
+//IPAddress MYDNS(192, 168, 1, 254);
+//IPAddress MYGW(192, 168, 1, 254);
 
 
 MFRC522DriverPinSimple ss_pin(10); // Configurable, see typical pin layout above.
@@ -46,13 +47,17 @@ MFRC522DriverSPI driver{ss_pin}; // Create SPI driver.
 //MFRC522DriverI2C driver{}; // Create I2C driver.
 MFRC522 mfrc522{driver};  // Create MFRC522 instance.
 
-t_terminalStates TerminalState = WAIT_CARD_ENTRY;
+t_terminalStates TerminalState = OFFLINE_ENTRY;
 t_terminalStatus TerminalStatus;
 t_refueling Refueling;
 t_chipcard chipcard;
 
 //create counter object
 //PulseCounter pc0;
+
+unsigned long multPulses  = 0;
+unsigned long pcnt_value = 0;
+pcnt_isr_handle_t user_isr_handle = NULL; //user's ISR service handle
 
 bool shouldReboot = false; 
 
@@ -89,58 +94,23 @@ void checkWifi(t_terminalStatus *ts) {
 }
 
 
-void initLAN() {
-  
-  ESP_LOGD("LAN", "Init Ethernet ...");
-
-  // Reset LAN Chip
-  pinMode(4, OUTPUT);
-  digitalWrite(4, 0);
-  delay(10);
-  digitalWrite(4,1);
-
-  Ethernet.init(7);  // Most Arduino shields
-
-  // try to configure using IP address instead of DHCP:
-  //Ethernet.begin(mac, ip, myDns);
-  Ethernet.begin(mac, MYIPADDR, MYDNS, MYGW, MYIPMASK);
-
-  // Check for Ethernet Hardware
-  if (Ethernet.hardwareStatus() == EthernetNoHardware)
-  {
-    ESP_LOGD("LAN", "Check Ethernet HARDWARE");
-  }
-
-  if (Ethernet.linkStatus() == LinkOFF)
-  {
-    ESP_LOGD("LAN", "No Link! Check network cable");
-  }
-  
-  // give the Ethernet shield a second to initialize:
-  delay(1000);
-
-  ESP_LOGD("LAN", "IP: ", Ethernet.localIP());
-
+static void IRAM_ATTR pcnt_example_intr_handler(void *arg)
+{
+  multPulses ++;
+  PCNT.int_clr.val = BIT(PCNT_UNIT_0);
 }
 
 void initIO() {
   
   init_buzzer();
 
+  unsigned long *ptr;
+  
   // Setup IO
   pinMode(PUMP_RELAIS, OUTPUT);
   pinMode(PUMP_LED, OUTPUT);
 
-  // // Setup pulse counter
-  // pc0.initialise(PUMP_PULSE ,PCNT_PIN_NOT_USED);
-  // pc0.set_mode(PCNT_COUNT_DIS,PCNT_COUNT_INC,PCNT_MODE_KEEP,PCNT_MODE_KEEP);
-  // // set glich filter to ignore pulses less than 1000 x 2.5ns
-  // pc0.set_filter_value(1000);
-  
-  // // clear and restart the counter
-  // pc0.clear();
-  // pc0.pause();
-
+  // Setup Pulse Counter
   pcnt_config_t pcntFreqConfig = {                         // Instancia do Contador de Pulsos
     .pulse_gpio_num = PUMP_PULSE, 
     .ctrl_gpio_num = PCNT_PIN_NOT_USED,
@@ -148,7 +118,7 @@ void initIO() {
     .hctrl_mode = PCNT_MODE_KEEP,
     .pos_mode = PCNT_COUNT_DIS,
     .neg_mode = PCNT_COUNT_INC,
-    .counter_h_lim = 32767,
+    .counter_h_lim = PCNT_H_LIM_VAL,
     .counter_l_lim = -32768,
     .unit = PCNT_UNIT_0,
     .channel = PCNT_CHANNEL_0,
@@ -157,10 +127,21 @@ void initIO() {
   result=pcnt_unit_config(&pcntFreqConfig);
   ESP_LOGD("PCNT", "%d", result);                         // configura os registradores do Contador de Pulsos
 
-  
+  /* Enable events on zero, maximum and minimum limit values */
+  pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_ZERO);
+  pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_H_LIM);
+
+  pcnt_counter_pause(PCNT_UNIT_0);
   pcnt_counter_clear(PCNT_UNIT_0);                        // Zera e reseta o Contador de Pulsos
 
-  //pcnt_counter_resume(PCNT_UNIT_0);                       // reinicia o Contador de Pulsos
+  /* Register ISR handler and enable interrupts for PCNT unit */
+  pcnt_isr_register(pcnt_example_intr_handler, NULL, 0, NULL);
+  pcnt_intr_enable(PCNT_UNIT_0);
+  pcnt_counter_resume(PCNT_UNIT_0);                       // reinicia o Contador de Pulsos
+
+  // Deactivate Pull UP/DOWN on PUMP GPIO 
+  gpio_set_pull_mode((gpio_num_t) PUMP_PULSE, GPIO_FLOATING);
+
 }
 
 void io_UpdateStatus(t_terminalStatus ts)
@@ -176,7 +157,8 @@ void io_UpdateStatus(t_terminalStatus ts)
     digitalWrite(PUMP_LED, 0);
     digitalWrite(PUMP_RELAIS, 0);
   }
-    
+
+  // Check   
 }
 
 void updateStatus(void * paramter)
@@ -184,7 +166,11 @@ void updateStatus(void * paramter)
   for(;;)
   {
     checkConnection(&TerminalStatus);
-    //checkWifi(&TerminalStatus);
+    checkWifi(&TerminalStatus);
+
+    if (!TerminalStatus.wifi || !TerminalStatus.connected)
+      TerminalState=OFFLINE_ENTRY;
+
     log_i("Update Status");
     unsigned int temp = uxTaskGetStackHighWaterMark(nullptr);
     log_i("Stack: %d", temp);
@@ -216,8 +202,8 @@ void setup() {
   initWiFi();
   //initLAN();
   String localIP = WiFi.localIP().toString();
-  
-  lcd_ShowIP(localIP.c_str());
+  localIP.toCharArray(&TerminalStatus.s_IP[0], 16);
+  lcd_ShowIP(&TerminalStatus.s_IP[0]);
   delay(2000);
 
   configureWebServer(&server);
@@ -230,7 +216,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     updateStatus,    // Function that should be called
     "Update Status",   // Name of the task (for debugging)
-    3000,            // Stack size (bytes)
+    4000,            // Stack size (bytes)
     NULL,            // Parameter to pass
     1,               // Task priority
     NULL,             // Task handle
@@ -382,6 +368,21 @@ void loop() {
   static int httpResult;
 
   switch(TerminalState) {
+    case OFFLINE_ENTRY:
+      TerminalState = OFFLINE;
+      lcd_OfflineMessage();
+    break;
+
+    case OFFLINE:
+      if (TerminalStatus.connected && TerminalStatus.wifi)
+        TerminalState = WAIT_CARD_ENTRY;
+      else
+      {
+        TerminalState = OFFLINE;
+      }
+        
+    break;
+
     case WAIT_CARD_ENTRY:
       ESP_LOGD("SM", "Entered state WAITCARD");
       lcd_WaitForTransponder();
@@ -417,27 +418,27 @@ void loop() {
       ESP_LOGD("SM", "Entered state COUNTFUEL");
       lcd_ShowAircraft(Refueling);
       lcd_ShowCount();
-      state_delay=20;
+      //state_delay=20;
+
+      // clear and restart the counter
+      multPulses = 0;
+      pcnt_counter_pause(PCNT_UNIT_0);
+      pcnt_counter_clear(PCNT_UNIT_0);
+      pcnt_counter_resume(PCNT_UNIT_0);
+
       TerminalState=COUNT_FUEL;
     break;
 
     case COUNT_FUEL:
-      
-      // clear and restart the counter
-      //pcnt_counter_pause(PCNT_UNIT_0);
-      //pcnt_counter_clear(PCNT_UNIT_0);
-      //pcnt_counter_resume(PCNT_UNIT_0);
-
       // Turn on fuel pump
       TerminalStatus.pump=1;
 
       // Count fuel 
       // insert code here
-      Refueling.amount= Refueling.amount + 0.05;
-      
       int16_t amount;
       pcnt_get_counter_value(PCNT_UNIT_0, &amount);
-      ESP_LOGD("SM", "count %d", amount);
+      Refueling.amount = (multPulses * PCNT_H_LIM_VAL + amount) / Config.calibration;
+      ESP_LOGD("SM", "Fuel %f", Refueling.amount);
       
       lcd_UpdateFuelCount(Refueling);
 
@@ -520,6 +521,48 @@ void loop() {
     ESP.restart();
   }
 
+  if(user_isr_handle) {
+        //Free the ISR service handle.
+        esp_intr_free(user_isr_handle);
+        user_isr_handle = NULL;
+  }
+
   delay(100);
   
 }
+
+
+
+// void initLAN() {
+  
+//   ESP_LOGD("LAN", "Init Ethernet ...");
+
+//   // Reset LAN Chip
+//   pinMode(4, OUTPUT);
+//   digitalWrite(4, 0);
+//   delay(10);
+//   digitalWrite(4,1);
+
+//   Ethernet.init(7);  // Most Arduino shields
+
+//   // try to configure using IP address instead of DHCP:
+//   //Ethernet.begin(mac, ip, myDns);
+//   Ethernet.begin(mac, MYIPADDR, MYDNS, MYGW, MYIPMASK);
+
+//   // Check for Ethernet Hardware
+//   if (Ethernet.hardwareStatus() == EthernetNoHardware)
+//   {
+//     ESP_LOGD("LAN", "Check Ethernet HARDWARE");
+//   }
+
+//   if (Ethernet.linkStatus() == LinkOFF)
+//   {
+//     ESP_LOGD("LAN", "No Link! Check network cable");
+//   }
+  
+//   // give the Ethernet shield a second to initialize:
+//   delay(1000);
+
+//   ESP_LOGD("LAN", "IP: ", Ethernet.localIP());
+
+// }

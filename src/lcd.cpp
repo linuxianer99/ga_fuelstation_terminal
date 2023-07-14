@@ -36,6 +36,17 @@ void lcd_SendDataResult(int result){
   }
 }
 
+void lcd_OfflineMessage()
+{
+  lcd.clear();
+  lcd.print("Terminal OFFLINE!");
+  lcd.setCursor(0,1);
+  lcd.print("NO Refueling");
+  lcd.setCursor(0,2);
+  lcd.print("Contact Admin!");
+
+}
+
 void lcd_WelcomeMessage()
 {   
   lcd.print("GA Fuel Station");
@@ -53,11 +64,11 @@ void lcd_ConnectingWIFI()
 
 
 
-void lcd_ShowIP(const char *address)
+void lcd_ShowIP(char *address)
 {
-  char buffer[16]; 
+  char buffer[20]; 
   lcd.setCursor(0,1);
-  snprintf(buffer, 16, "IP: %s", &address);
+  snprintf(buffer, 20, "IP: %s", address);
   lcd.print(buffer);
 }
 
@@ -96,22 +107,22 @@ void lcd_UpdateStatus(t_refueling rf, t_terminalStatus ts)
   lcd.setCursor(18,3);
   if (ts.wifi)
   {
-    lcd.write('W');
+    lcd.write('N');
   }
   else
   {
-    lcd.write('x');
+    lcd.write('n');
   }
 
   // Show Server connection status
   lcd.setCursor(19,3);
   if (ts.connected)
   {
-    lcd.write('C');
+    lcd.write('B');
   }
   else
   {
-    lcd.write('x');
+    lcd.write('b');
   }
 
 }
