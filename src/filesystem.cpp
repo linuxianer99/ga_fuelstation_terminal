@@ -60,7 +60,7 @@ void saveConfiguration(const char *filename, const t_Config &config) {
   doc["httppassword"] = config.httppassword;
   doc["httpapitoken"] = config.httpapitoken;
   doc["fuelsort"] = config.fuelsort;
-  doc["billingserver"] = config.billingserverURL;
+  doc["billingserver"] = config.billingserver;
   doc["billingkey"] = config.billingkey;
   doc["syslogserver"] = config.syslogserver;
   doc["syslogport"] = config.syslogport;
@@ -70,6 +70,7 @@ void saveConfiguration(const char *filename, const t_Config &config) {
   doc["ntpserver"] = config.ntpserver;
   doc["webpagedelay"] = config.webpagedelay;
   doc["buzzerintensity"] = config.buzzerintensity;
+  doc["calibration"] = config.calibration;
   
 
   // Serialize JSON to file
@@ -145,6 +146,7 @@ void loadConfiguration(const char *filename, t_Config &config) {
     }
 
     log_i("Deser done");
+    
 
     // Copy values from the JsonDocument to the Config
     config.terminal_id = doc["terminal_id"].as<String>();
@@ -189,18 +191,19 @@ void loadConfiguration(const char *filename, t_Config &config) {
         config.httppassword = default_httppassword;
     }
 
-    config.billingserverURL = doc["billingserverURL"].as<String>();
-    if (config.billingserverURL == "null") {
+    config.billingserver = doc["billingserver"].as<String>();
+    log_i("Parsing Billing Server");
+    if (config.billingserver == "null") {
+        log_i("not found in config");
         initiatesave = true;
-        config.billingserverURL = default_billingserverURL;
+        config.billingserver = default_billingserver;
     }
 
-    config.billingkey = doc["billingskey"].as<String>();
+    config.billingkey = doc["billingkey"].as<String>();
     if (config.billingkey == "null") {
         initiatesave = true;
         config.billingkey = default_billingkey;
     }
-
 
     config.syslogserver = doc["syslogserver"].as<String>();
     if (config.syslogserver == "null") {
@@ -252,6 +255,13 @@ void loadConfiguration(const char *filename, t_Config &config) {
         config.buzzerintensity = default_buzzerintensity;
     }
 
+    if (doc.containsKey("calibration")) {
+        config.calibration = doc["calibration"].as<float>();
+    } else {
+        initiatesave = true;
+        config.calibration = default_calibration;
+    }
+
     log_i("Copy config done");
 
     file.close();
@@ -269,6 +279,7 @@ void printConfig(t_Config &config) {
   log_i("                ssid: %s", config.ssid);
   log_i("        wifipassword: %s", config.wifipassword);
   log_i("            fuelsort: %s", config.fuelsort);
+  log_i("         calibration: %f", config.calibration);
 }
 
 // Prints the content of a file to the Serial

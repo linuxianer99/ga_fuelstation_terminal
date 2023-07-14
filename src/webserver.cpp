@@ -5,9 +5,11 @@
 #include <LittleFS.h>
 #include "config.h"
 #include "filesystem.h"
+#include "main.h"
 
 extern t_Config Config;
 extern bool shouldReboot;
+extern t_terminalStates TerminalState;
 
 void notFound(AsyncWebServerRequest *request) {
   log_i("Page not found");
@@ -74,6 +76,10 @@ String processor(const String& var) {
 
     if (var == "WEBPAGEDELAY") {
         return String(Config.webpagedelay * 1000);
+    }
+
+    if (var == "TERMINALSTATUS") {
+        return String(TerminalState);
     }
 
 //   if (var == "FIRMWARE") {

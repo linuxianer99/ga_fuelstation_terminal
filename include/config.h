@@ -22,6 +22,8 @@
 #define BUZZER_FREQ 2000
 #define BUZZER_LEN 500
 
+#define PCNT_H_LIM_VAL      1000
+
 // configuration structure
 typedef struct {
   String terminal_id;           // hostname of device
@@ -32,7 +34,7 @@ typedef struct {
   String httpuser;           // username to access web admin
   String httppassword;       // password to access web admin
   String httpapitoken;       // api token used to authenticate against the device
-  String billingserverURL;   // Server to report the refueling to
+  String billingserver;      // Server to report the refueling to
   String billingkey;         // Base64 encoded key
   String syslogserver;       // hostname or ip of the syslog server
   int syslogport;            // sylog port number
@@ -42,4 +44,5 @@ typedef struct {
   String ntpserver;          // hostname or ip of the ntpserver
   int webpagedelay;
   int buzzerintensity;
+  float calibration;
 } t_Config;
