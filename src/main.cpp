@@ -59,6 +59,8 @@ unsigned long multPulses  = 0;
 unsigned long pcnt_value = 0;
 pcnt_isr_handle_t user_isr_handle = NULL; //user's ISR service handle
 
+unsigned long heartbeat_suspended = 0;
+
 bool shouldReboot = false; 
 
 // Setup Webserver
@@ -139,6 +141,9 @@ void initIO() {
   pcnt_intr_enable(PCNT_UNIT_0);
   pcnt_counter_resume(PCNT_UNIT_0);                       // reinicia o Contador de Pulsos
 
+  pcnt_set_filter_value(PCNT_UNIT_0, 1023);
+  pcnt_filter_enable(PCNT_UNIT_0);
+
   // Deactivate Pull UP/DOWN on PUMP GPIO 
   gpio_set_pull_mode((gpio_num_t) PUMP_PULSE, GPIO_FLOATING);
 
@@ -165,16 +170,27 @@ void updateStatus(void * paramter)
 {
   for(;;)
   {
-    checkConnection(&TerminalStatus);
-    checkWifi(&TerminalStatus);
+    if (TerminalState == SEND_DATA_ENTRY || TerminalState == SEND_DATA)
+    {
+      log_i("Update Status - SUSPENDED");
+      heartbeat_suspended++;  
+    }    
+    else
+    {
+      checkConnection(&TerminalStatus);
+      checkWifi(&TerminalStatus);
+
+    //TerminalStatus.wifi = 1;
+    //TerminalStatus.connecsted = 1;
 
     if (!TerminalStatus.wifi || !TerminalStatus.connected)
       TerminalState=OFFLINE_ENTRY;
 
-    log_i("Update Status");
-    unsigned int temp = uxTaskGetStackHighWaterMark(nullptr);
-    log_i("Stack: %d", temp);
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
+      log_i("Update Status");
+      unsigned int temp = uxTaskGetStackHighWaterMark(nullptr);
+      log_i("Suspended cntr: %d", heartbeat_suspended);
+    }
+    vTaskDelay(Config.heartbeat / portTICK_PERIOD_MS);
   }
 }
 
@@ -216,7 +232,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     updateStatus,    // Function that should be called
     "Update Status",   // Name of the task (for debugging)
-    4000,            // Stack size (bytes)
+    8000,            // Stack size (bytes)
     NULL,            // Parameter to pass
     1,               // Task priority
     NULL,             // Task handle
@@ -437,7 +453,8 @@ void loop() {
       // insert code here
       int16_t amount;
       pcnt_get_counter_value(PCNT_UNIT_0, &amount);
-      Refueling.amount = (multPulses * PCNT_H_LIM_VAL + amount) / Config.calibration;
+      ESP_LOGD("SM", "Counter: %d, MultPulses: %d, Total Pulses: %d", amount,multPulses, (multPulses * PCNT_H_LIM_VAL + amount));
+      Refueling.amount = (float)(multPulses * PCNT_H_LIM_VAL + amount) / (float)Config.calibration;
       ESP_LOGD("SM", "Fuel %f", Refueling.amount);
       
       lcd_UpdateFuelCount(Refueling);
