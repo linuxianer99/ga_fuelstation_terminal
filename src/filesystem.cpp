@@ -62,8 +62,7 @@ void saveConfiguration(const char *filename, const t_Config &config) {
   doc["fuelsort"] = config.fuelsort;
   doc["billingserver"] = config.billingserver;
   doc["billingkey"] = config.billingkey;
-  doc["syslogserver"] = config.syslogserver;
-  doc["syslogport"] = config.syslogport;
+  doc["heartbeat"] = config.heartbeat;
   doc["ntptimezone"] = config.ntptimezone;
   doc["ntpsynctime"] = config.ntpsynctime;
   doc["ntpwaitsynctime"] = config.ntpwaitsynctime;
@@ -205,16 +204,10 @@ void loadConfiguration(const char *filename, t_Config &config) {
         config.billingkey = default_billingkey;
     }
 
-    config.syslogserver = doc["syslogserver"].as<String>();
-    if (config.syslogserver == "null") {
+    config.heartbeat = doc["heartbeat"];
+    if (config.heartbeat == 0) {
         initiatesave = true;
-        config.syslogserver = default_syslogserver;
-    }
-
-    config.syslogport = doc["syslogport"];
-    if (config.syslogport == 0) {
-        initiatesave = true;
-        config.syslogport = default_syslogport;
+        config.heartbeat = default_heartbeat;
     }
 
     config.ntptimezone = doc["ntptimezone"].as<String>();

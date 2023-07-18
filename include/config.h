@@ -36,8 +36,7 @@ typedef struct {
   String httpapitoken;       // api token used to authenticate against the device
   String billingserver;      // Server to report the refueling to
   String billingkey;         // Base64 encoded key
-  String syslogserver;       // hostname or ip of the syslog server
-  int syslogport;            // sylog port number
+  int heartbeat;             // Heartbeat interval
   String ntptimezone;        // ntp time zone to use, use the TZ database name from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
   int ntpsynctime;           // how frequently to schedule the regular syncing of ntp time
   int ntpwaitsynctime;       // upon boot, wait these many seconds to get ntp time from server
