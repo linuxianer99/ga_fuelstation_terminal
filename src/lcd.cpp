@@ -31,6 +31,8 @@ void lcd_SendDataResult(int result){
     lcd.print("Sending data OK!");
   }
   else{
+    lcd.print("                ");
+    lcd.setCursor(0,2);
     snprintf(buffer, 16, "ERROR: %d", result);
     lcd.print(buffer);
   }
