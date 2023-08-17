@@ -63,10 +63,6 @@ void saveConfiguration(const char *filename, const t_Config &config) {
   doc["billingserver"] = config.billingserver;
   doc["billingkey"] = config.billingkey;
   doc["heartbeat"] = config.heartbeat;
-  doc["ntptimezone"] = config.ntptimezone;
-  doc["ntpsynctime"] = config.ntpsynctime;
-  doc["ntpwaitsynctime"] = config.ntpwaitsynctime;
-  doc["ntpserver"] = config.ntpserver;
   doc["webpagedelay"] = config.webpagedelay;
   doc["buzzerintensity"] = config.buzzerintensity;
   doc["calibration"] = config.calibration;
@@ -208,30 +204,6 @@ void loadConfiguration(const char *filename, t_Config &config) {
     if (config.heartbeat == 0) {
         initiatesave = true;
         config.heartbeat = default_heartbeat;
-    }
-
-    config.ntptimezone = doc["ntptimezone"].as<String>();
-    if (config.ntptimezone == "null") {
-        initiatesave = true;
-        config.ntptimezone = default_ntptimezone;
-    }
-
-    config.ntpsynctime = doc["ntpsynctime"];
-    if (config.ntpsynctime == 0) {
-        initiatesave = true;
-        config.ntpsynctime = default_ntpsynctime;
-    }
-
-    config.ntpwaitsynctime = doc["ntpwaitsynctime"];
-    if (config.ntpwaitsynctime == 0) {
-        initiatesave = true;
-        config.ntpwaitsynctime = default_ntpwaitsynctime;
-    }
-
-    config.ntpserver = doc["ntpserver"].as<String>();
-    if (config.ntpserver == "null") {
-        initiatesave = true;
-        config.ntpserver = default_ntpserver;
     }
 
     if (doc.containsKey("webpagedelay")) {
