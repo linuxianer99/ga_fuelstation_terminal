@@ -2,13 +2,14 @@
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 #include <main.h>
+#include "version.h"
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 void lcd_init(){
-     // init LCD
-  
-  lcd.init();                      // initialize the lcd 
+  // init LCD
+    
+  lcd.init();                      // initialize the lcd
   lcd.backlight();
   lcd.clear();
 }
@@ -52,10 +53,8 @@ void lcd_OfflineMessage()
 void lcd_WelcomeMessage()
 {   
   lcd.print("GA Fuel Station");
-  lcd.setCursor(0,1);
-  lcd.print("@MLV Thannhausen");
   lcd.setCursor(0,3);
-  lcd.print("Version 1.0");
+  lcd.print(VERSION);
 }
 
 void lcd_ConnectingWIFI()
