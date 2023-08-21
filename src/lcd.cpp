@@ -6,11 +6,17 @@
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
+uint8_t one[8] = {0b00000, 0b10001,	0b01010, 0b00100,	0b01010, 0b10001,	0b00000, 0b00000};
+uint8_t two[8] = {0b00000, 0b00100, 0b00100, 0b11111, 0b00100, 0b00100,	0b00000, 0b00000};
+ 
+
 void lcd_init(){
   // init LCD
     
   lcd.init();                      // initialize the lcd
   lcd.backlight();
+  lcd.createChar(0, one);
+  lcd.createChar(1, two);
   lcd.clear();
 }
 
@@ -93,9 +99,9 @@ void lcd_UpdateStatus(t_refueling rf, t_terminalStatus ts)
   if (ts.pump)
   {
     lcd.setCursor(2,3);
-    lcd.write(pump[index]);
+    lcd.write(index);
     index++;
-    if (index > 3)
+    if (index > 1)
       index = 0;
   }
   else
