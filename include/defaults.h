@@ -13,6 +13,7 @@ const int default_heartbeat = 10000;  // 10 seconds
 const int default_webpagedelay = 1; // minimum should really be 1 second, if set to 0 the webadmin page often refreshes before action has completed
 const int default_buzzerintensity = 50;
 const float default_calibration = 90;
+const int default_pump_timeout = 100;
 
  
  

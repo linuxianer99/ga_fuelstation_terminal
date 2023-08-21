@@ -40,4 +40,5 @@ typedef struct {
   int webpagedelay;
   int buzzerintensity;
   float calibration;
+  int pump_timeout;
 } t_Config;

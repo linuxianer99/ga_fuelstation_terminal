@@ -411,6 +411,7 @@ void loop() {
 
   static int sm_counter=0;
   static int state_delay=0;
+  static int pump_timeout=0;
   static int httpResult;
 
   switch(TerminalState) {
@@ -471,6 +472,9 @@ void loop() {
       pcnt_counter_clear(PCNT_UNIT_0);
       pcnt_counter_resume(PCNT_UNIT_0);
 
+      // reset pump timeout
+      pump_timeout = 0;
+
       TerminalState=COUNT_FUEL;
     break;
 
@@ -488,13 +492,17 @@ void loop() {
       
       lcd_UpdateFuelCount(Refueling);
 
+      // increas timeout counter
+      pump_timeout++;
+      ESP_LOGD("SM", "Pump Timeout %d", pump_timeout);
+
       // check for chipcard
-      if (state_delay > 0){
+      //if (state_delay > 0){
         // handle state delay
-        state_delay--;
-      }
-      else {
-        if (handle_chipcard(&chipcard))
+      //  state_delay--;
+      //}
+      //else {
+      if (handle_chipcard(&chipcard))
         {
           // a valid chipcard was read
           ESP_LOGD("SM", "Chip card read");
@@ -502,7 +510,15 @@ void loop() {
           // Change State
           TerminalState=SEND_DATA_ENTRY;
         }
+      
+      if (pump_timeout > Config.pump_timeout)
+      {
+        // Timeout reached Change State
+        TerminalState=SEND_DATA_ENTRY;
+        ESP_LOGD("SM", "Pump Timeout reached!");
+        beep(500);
       }
+      //}
       
     break;
 
@@ -539,7 +555,7 @@ void loop() {
       lcd_SendDataResult(httpResult);
       while(1);
     }
-    state_delay=50;
+      state_delay=50;
     
       // Change State
       TerminalState=SHOW_SUMMARY;

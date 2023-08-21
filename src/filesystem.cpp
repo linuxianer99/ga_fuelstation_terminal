@@ -66,6 +66,7 @@ void saveConfiguration(const char *filename, const t_Config &config) {
   doc["webpagedelay"] = config.webpagedelay;
   doc["buzzerintensity"] = config.buzzerintensity;
   doc["calibration"] = config.calibration;
+  doc["pump_timeout"] = config.pump_timeout;
   
 
   // Serialize JSON to file
@@ -227,6 +228,12 @@ void loadConfiguration(const char *filename, t_Config &config) {
         config.calibration = default_calibration;
     }
 
+    config.pump_timeout = doc["pump_timeout"];
+    if (config.pump_timeout == 0) {
+        initiatesave = true;
+        config.pump_timeout = default_pump_timeout;
+    }
+
     log_i("Copy config done");
 
     file.close();
@@ -245,6 +252,8 @@ void printConfig(t_Config &config) {
   log_i("        wifipassword: %s", config.wifipassword);
   log_i("            fuelsort: %s", config.fuelsort);
   log_i("         calibration: %f", config.calibration);
+  log_i("        pump timeout: %d", config.pump_timeout);
+
 }
 
 // Prints the content of a file to the Serial

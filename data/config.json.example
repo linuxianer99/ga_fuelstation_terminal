@@ -3,6 +3,13 @@
     "wifipassword": "<WIFI key HERE>",
     "buzzerintensity": 20,
     "fuelsort": "<FuelSORT of Pump>",
-    "billingserverURL": "<BILLING Server URL>",
+    "billingserver": "<BILLING Server URL>",
     "terminal_id": "<PUMPID>"
+    "pump_timeout": 5000
+    "httpuser":"admin",
+    "httppassword":"admin",
+    "httpapitoken":"",
+    "heartbeat":10000,
+    "webpagedelay":1,
+    "calibration":91
 }
