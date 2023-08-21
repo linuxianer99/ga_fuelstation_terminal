@@ -225,6 +225,8 @@ void setup() {
   Serial.begin(115200); // Initialize serial communications with the PC for debugging.
 
   rebootReason = rtc_get_reset_reason(0);
+  TerminalStatus.rebootReason = rebootReason;
+  TerminalStatus.rebooted = true;
   print_reset_reason(rebootReason);
   init_FS();
 
@@ -556,6 +558,7 @@ void loop() {
   }
 
   //log_i("Loop running on core: %d", xPortGetCoreID());
+  TerminalStatus.freeHeap = ESP.getFreeHeap();
   io_UpdateStatus(TerminalStatus);
   lcd_UpdateStatus(Refueling, TerminalStatus);
   //delay(500); //change value if you want to read cards faster

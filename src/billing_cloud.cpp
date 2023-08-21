@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <HttpClient.h>
 #include <WiFiClientSecure.h>
 #include "main.h"
@@ -72,6 +73,8 @@ int SendRefueling(t_refueling Refueling)
             httpResponseCode = https.POST(requestBody);
             log_i("Server Respone %d", httpResponseCode);
             https.end();
+            client->stop();
+            delete client;
 
             if (httpResponseCode == 200){
                 // Transfer successful    
@@ -85,19 +88,38 @@ int SendRefueling(t_refueling Refueling)
     }
 }
 
+
 void checkConnection(t_terminalStatus *ts) 
 {
+    int httpResponseCode;
+    String requestBody;
+    StaticJsonDocument<200> doc;
+
     WiFiClientSecure *client = new WiFiClientSecure;
-     if(client) {
+    
+    if(client) {
         // set secure client with certificate
         client->setCACert(rootCACertificate);
         //create an HTTPClient instance
         HTTPClient https;
     
-        https.begin(*client, Config.billingserver + "/" + Config.terminal_id + "/ping");
+        // Add data
+        doc["freeheap"] = ts->freeHeap;
+        if (ts->rebooted == true) {
+            doc["reboot_reason"] = ts->rebootReason;
+            ts->rebooted = false;
+        }
+        
+        doc["ip"] = ts->s_IP;
+        serializeJson(doc, requestBody);
+        log_i("Message: %s", requestBody);
+
+        https.begin(*client, Config.billingserver + "/" + Config.terminal_id + "/status");
+        //https.begin(Config.billingserver + "/" + Config.terminal_id + "/status");
         // Send HTTP GET request
-        int httpResponseCode = https.GET();
-        log_i("Server Respone %d", httpResponseCode);
+        https.addHeader("Content-Type", "application/json");
+        httpResponseCode = https.POST(requestBody);
+        
         if (httpResponseCode>0) {
             log_i("Terminal connected");
             ts->connected = 1; 
@@ -106,6 +128,36 @@ void checkConnection(t_terminalStatus *ts)
             log_i("Terminal NOT connected");
             ts->connected = 0;
         }
+        
         https.end();
+        client->stop();
+        delete client;
     }
 }
+
+// void checkConnection(t_terminalStatus *ts) 
+// {
+//     WiFiClientSecure *client = new WiFiClientSecure;
+//      if(client) {
+//         // set secure client with certificate
+//         client->setCACert(rootCACertificate);
+//         //create an HTTPClient instance
+//         HTTPClient https;
+    
+//         https.begin(*client, Config.billingserver + "/" + Config.terminal_id + "/ping");
+//         // Send HTTP GET request
+//         int httpResponseCode = https.GET();
+//         log_i("Server Respone %d", httpResponseCode);
+//         if (httpResponseCode>0) {
+//             log_i("Terminal connected");
+//             ts->connected = 1; 
+//         }
+//         else {
+//             log_i("Terminal NOT connected");
+//             ts->connected = 0;
+//         }
+//         https.end();
+//         client->stop();
+//         delete client;
+//     }
+// }

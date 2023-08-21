@@ -26,6 +26,9 @@ typedef struct  {
   int connected;
   int wifi; 
   char s_IP[16];
+  unsigned int rebootReason;
+  bool rebooted;
+  uint32_t freeHeap;
 } t_terminalStatus;
 
 typedef struct {
