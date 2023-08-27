@@ -149,14 +149,15 @@ void lcd_UpdateStatus(t_refueling rf, t_terminalStatus ts)
 }
 
 void lcd_ShowAircraft(t_refueling rf){
-  char buffer[16];
+  char buffer[20];
   lcd.clear();
   lcd.setCursor(0,0);
+  ESP_LOGD("LCD", "Article: %s", rf.article);
   snprintf(buffer, 16, rf.aircraft);
   lcd.print(buffer);
 
-  lcd.setCursor(10,0);
-  snprintf(buffer, 16, rf.article);
+  lcd.setCursor(0,2);
+  snprintf(buffer, 20, rf.article);
   lcd.print(buffer);
 }
 
