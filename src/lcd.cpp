@@ -4,6 +4,10 @@
 #include <main.h>
 #include "version.h"
 
+#include "config.h"
+
+extern t_Config Config;
+
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 uint8_t one[8] = {0b00000, 0b10001,	0b01010, 0b00100,	0b01010, 0b10001,	0b00000, 0b00000};
@@ -59,6 +63,8 @@ void lcd_OfflineMessage()
 void lcd_WelcomeMessage()
 {   
   lcd.print("GA Fuel Station");
+  lcd.setCursor(0,2);
+  lcd.print(Config.terminal_id.c_str());
   lcd.setCursor(0,3);
   lcd.print(VERSION);
 }
@@ -86,6 +92,14 @@ void lcd_UpdateFuelCount(t_refueling rf)
   snprintf(buffer, 16, "%.2f", rf.amount);
   lcd.print(buffer);
 
+}
+
+void lcd_Backlight(int status)
+{
+  if (status == 1)
+    lcd.backlight();
+  else
+    lcd.noBacklight();
 }
 
 void lcd_UpdateStatus(t_refueling rf, t_terminalStatus ts)

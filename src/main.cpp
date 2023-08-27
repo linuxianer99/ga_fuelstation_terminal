@@ -16,6 +16,7 @@
 #include <LittleFS.h>
 #include "webserver.h"
 #include "buzzer.h"
+#include "led.h"
 
 #include <driver/pcnt.h>
 #include "soc/pcnt_struct.h"
@@ -108,12 +109,13 @@ static void IRAM_ATTR pcnt_example_intr_handler(void *arg)
 void initIO() {
   
   init_buzzer();
+  init_status_led();
 
   unsigned long *ptr;
   
   // Setup IO
   pinMode(PUMP_RELAIS, OUTPUT);
-  pinMode(PUMP_LED, OUTPUT);
+  //pinMode(PUMP_LED, OUTPUT);
 
   // Setup Pulse Counter
   pcnt_config_t pcntFreqConfig = {                         // Instancia do Contador de Pulsos
@@ -152,17 +154,19 @@ void initIO() {
 
 }
 
-void io_UpdateStatus(t_terminalStatus ts)
+void io_UpdateStatus(t_terminalStatus tstatus, t_terminalStates tstates)
 {
-  // Update Pump LED
-  if (ts.pump)
+  if (tstates == WAIT_CARD)
+    status_led_fade();
+
+  else if ((tstatus.pump == 1) && (tstates == COUNT_FUEL))
   {
-    digitalWrite(PUMP_LED, 1);
+    status_led_on();
     digitalWrite(PUMP_RELAIS, 1);
   }
   else
   {
-    digitalWrite(PUMP_LED, 0);
+    status_led_off();
     digitalWrite(PUMP_RELAIS, 0);
   }
 
@@ -418,6 +422,7 @@ void loop() {
     case OFFLINE_ENTRY:
       TerminalState = OFFLINE;
       lcd_OfflineMessage();
+      lcd_Backlight(1);
     break;
 
     case OFFLINE:
@@ -434,15 +439,22 @@ void loop() {
       ESP_LOGD("SM", "Entered state WAITCARD");
       lcd_WaitForTransponder();
       TerminalState=WAIT_CARD;
+      lcd_Backlight(0);
     break;
 
     case WAIT_CARD:
     
+      // Fade LED
+      status_led_fade();
+
       if (handle_chipcard(&chipcard))
       {
         // a valid chipcard was read
         ESP_LOGD("SM", "Chip card read");
 
+        // turn on Backlight
+        lcd_Backlight(1);
+        
         // Create current refueling object
         strcpy(Refueling.aircraft, chipcard.aircraft);
         strcpy(Refueling.memberid, chipcard.memberid);
@@ -575,7 +587,7 @@ void loop() {
 
   //log_i("Loop running on core: %d", xPortGetCoreID());
   TerminalStatus.freeHeap = ESP.getFreeHeap();
-  io_UpdateStatus(TerminalStatus);
+  io_UpdateStatus(TerminalStatus, TerminalState);
   lcd_UpdateStatus(Refueling, TerminalStatus);
   //delay(500); //change value if you want to read cards faster
   

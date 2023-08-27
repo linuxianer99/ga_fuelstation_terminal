@@ -10,3 +10,4 @@ void lcd_ShowCount();
 void lcd_SendData();
 void lcd_SendDataResult(int);
 void lcd_OfflineMessage();
+void lcd_Backlight(int);
