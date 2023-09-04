@@ -6,6 +6,8 @@ enum t_terminalStates {
   OFFLINE, // Terminal is OFFLINE
   WAIT_CARD_ENTRY, // Wait for a valid RFID card to be presented ENTRY STATE 
   WAIT_CARD, // Wait for a valid RFID card to be presented
+  WAIT_CARD_REMOVED_ENTRY,
+  WAIT_CARD_REMOVED, // Wait if the card is removed again
   COUNT_FUEL_ENTRY, // Count the fuel through the flow meter
   COUNT_FUEL, // Count the fuel through the flow meter
   SEND_DATA_ENTRY, // Send the data of the refueling to the cloud

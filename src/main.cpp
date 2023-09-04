@@ -47,7 +47,6 @@
 MFRC522DriverPinSimple ss_pin(10); // Configurable, see typical pin layout above.
 
 MFRC522DriverSPI driver{ss_pin}; // Create SPI driver.
-//MFRC522DriverI2C driver{}; // Create I2C driver.
 MFRC522 mfrc522{driver};  // Create MFRC522 instance.
 
 t_terminalStates TerminalState = OFFLINE_ENTRY;
@@ -55,8 +54,9 @@ t_terminalStatus TerminalStatus;
 t_refueling Refueling;
 t_chipcard chipcard;
 
-//create counter object
-//PulseCounter pc0;
+bool cardRemoved = false;
+int counter = 0;
+bool current, previous;
 
 unsigned long multPulses  = 0;
 unsigned long pcnt_value = 0;
@@ -276,7 +276,7 @@ void setup() {
 
 bool handle_chipcard(t_chipcard *cc)
 {
-  
+
   // Check if card is present ...
   if ( !mfrc522.PICC_IsNewCardPresent()) {
 	  return false;
@@ -407,7 +407,7 @@ bool handle_chipcard(t_chipcard *cc)
   // Give the user a beep as acknowledge
   beep(500);
 
-return true;
+  return true;
 
 }
 
@@ -468,16 +468,52 @@ void loop() {
           Refueling.aircraft, Refueling.memberid, Refueling.article, Refueling.amount);
 
         // Jump to next state
-        TerminalState = COUNT_FUEL_ENTRY;
-        ESP_LOGD("SM", "Transition: -> COUNTFUEL");
+        TerminalState = WAIT_CARD_REMOVED_ENTRY;
+        ESP_LOGD("SM", "Transition: -> WAIT_CARD_REMOVED_ENTRY");
       }
       break;
 
+    case WAIT_CARD_REMOVED_ENTRY:
+        lcd_ShowAircraft(Refueling);
+        lcd_ShowCount();
+        previous = !mfrc522.PICC_IsNewCardPresent();
+        cardRemoved = false;
+        counter=0;
+        // Jump to next state
+        TerminalState = WAIT_CARD_REMOVED;
+        ESP_LOGD("SM", "Transition: -> WAIT_CARD_REMOVED");
+      break;
+
+    case WAIT_CARD_REMOVED:
+      
+        if (!cardRemoved)
+        {
+          ESP_LOGD("SM", "State: Card still present");
+          current = ! mfrc522.PICC_IsNewCardPresent();
+          if (current && previous) counter++;
+
+          previous = current;
+          cardRemoved = (counter > 2);
+          //delay(10);
+
+        }
+        else
+        {
+          // Jump to next state
+          TerminalState = COUNT_FUEL_ENTRY;
+          ESP_LOGD("SM", "Transition: -> COUNTFUEL");
+        
+        }
+    break;
+    
     case COUNT_FUEL_ENTRY:
       ESP_LOGD("SM", "Entered state COUNTFUEL");
-      lcd_ShowAircraft(Refueling);
-      lcd_ShowCount();
       
+      if (mfrc522.PICC_ReadCardSerial())
+      {
+        break;
+      }
+
       // clear and restart the counter
       multPulses = 0;
       pcnt_counter_pause(PCNT_UNIT_0);
