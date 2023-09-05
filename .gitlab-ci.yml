@@ -23,5 +23,6 @@ build:
 
 release:
   stage: release
+  script: "pio run -e FuelStationHardware_RELEASE"
   only: 
     - tags
