@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <HttpClient.h>
+#include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include "main.h"
 #include "config.h"

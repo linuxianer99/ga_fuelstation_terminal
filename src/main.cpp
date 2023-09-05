@@ -10,7 +10,7 @@
 #include <EthernetENC.h>
 #include <WiFi.h>
 
-#include <HttpClient.h>
+#include <HTTPClient.h>
 
 #include "filesystem.h"
 #include <LittleFS.h>
