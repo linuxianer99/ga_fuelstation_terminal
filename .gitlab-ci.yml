@@ -7,10 +7,21 @@ cache:
 
 stages:
  - test
+ - build
+ - release
 
 before_script:
   - "pip install -U platformio"
 
-job:
+test:
   stage: test
   script: "pio run -e FuelStationHardware_DEBUG"
+
+build:
+  stage: build
+  script: "pio run -e FuelStationHardware_RELEASE"
+
+release:
+  stage: release
+  only: 
+    - tags
