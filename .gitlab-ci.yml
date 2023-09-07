@@ -18,8 +18,8 @@ build_debug:
   script: "pio run -e FuelStationHardware_DEBUG -d $CI_PROJECT_DIR"
   artifacts:
     paths:
-    - $CI_PROJECT_DIR/.pio/build/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.elf
-    - $CI_PROJECT_DIR/.pio/build/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.bin
+    - .pio/build/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.elf
+    - .pio/build/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.bin
 
 
 #release:
