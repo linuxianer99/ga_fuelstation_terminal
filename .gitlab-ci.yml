@@ -15,7 +15,10 @@ before_script:
   
 build_debug:
   stage: build_debug
-  script: "pio run -e FuelStationHardware_DEBUG -d $CI_PROJECT_DIR"
+  script: 
+    - "pio run -e FuelStationHardware_DEBUG -d $CI_PROJECT_DIR"
+    - pwd
+    - ls -al
   artifacts:
     paths:
     - .pio/build/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.elf
