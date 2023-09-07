@@ -12,16 +12,15 @@ stages:
 
 before_script:
   - "pip install -U platformio"
-  - "mkdir -p $CI_PROJECT_DIR/tmp/build"
-
+  
 test:
   stage: test
-  script: "pio run -e FuelStationHardware_DEBUG"
+  script: "pio run -e FuelStationHardware_DEBUG -d $CI_PROJECT_DIR"
   #script: "pio ci -e FuelStationHardware_DEBUG --build-dir=\"$CI_PROJECT_DIR/tmp/build\" --keep-build-dir"
   artifacts:
     paths:
-    - .pio/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.elf
-    - .pio/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.bin
+    - $CI_PROJECT_DIR/.pio/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.elf
+    - $CI_PROJECT_DIR/.pio/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.bin
 
 #build:
 #  stage: build
