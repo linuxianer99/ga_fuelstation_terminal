@@ -6,25 +6,21 @@ cache:
     - ~/.platformio/.cache
 
 stages:
- - test
+ - build_debug
  #- build
  #- release
 
 before_script:
   - "pip install -U platformio"
   
-test:
-  stage: test
+build_debug:
+  stage: build_debug
   script: "pio run -e FuelStationHardware_DEBUG -d $CI_PROJECT_DIR"
-  #script: "pio ci -e FuelStationHardware_DEBUG --build-dir=\"$CI_PROJECT_DIR/tmp/build\" --keep-build-dir"
   artifacts:
     paths:
-    - $CI_PROJECT_DIR/.pio/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.elf
-    - $CI_PROJECT_DIR/.pio/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.bin
+    - $CI_PROJECT_DIR/.pio/build/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.elf
+    - $CI_PROJECT_DIR/.pio/build/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.bin
 
-#build:
-#  stage: build
-#  script: "pio run -e FuelStationHardware_RELEASE"
 
 #release:
 #  stage: release
