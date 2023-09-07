@@ -16,12 +16,12 @@ before_script:
 
 test:
   stage: test
-  #script: "pio run -e FuelStationHardware_DEBUG"
-  script: "pio ci -e FuelStationHardware_DEBUG --build-dir=\"$CI_PROJECT_DIR/tmp/build\" --keep-build-dir"
+  script: "pio run -e FuelStationHardware_DEBUG"
+  #script: "pio ci -e FuelStationHardware_DEBUG --build-dir=\"$CI_PROJECT_DIR/tmp/build\" --keep-build-dir"
   artifacts:
     paths:
-    - tmp/build/.pio/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.elf
-    - tmp/build/.pio/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.bin
+    - .pio/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.elf
+    - .pio/FuelStationHardware_DEBUG\GA_FUEL_TERMINAL*.bin
 
 #build:
 #  stage: build
