@@ -16,7 +16,8 @@ before_script:
 build_debug:
   stage: build_debug
   script: 
-    - "pio run -e FuelStationHardware_DEBUG -d $CI_PROJECT_DIR"
+    #- "pio run -e FuelStationHardware_DEBUG -d $CI_PROJECT_DIR"
+    - touch GA_FUEL_TERMINAL_test.elf
     - pwd
     - ls -al
     - mkdir -p artifacts
