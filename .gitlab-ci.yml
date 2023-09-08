@@ -16,14 +16,14 @@ before_script:
 build_debug:
   stage: build_debug
   script: 
-    #- "pio run -e FuelStationHardware_DEBUG -d $CI_PROJECT_DIR"
+    - "pio run -e FuelStationHardware_DEBUG -d $CI_PROJECT_DIR"
     - touch GA_FUEL_TERMINAL_test.elf
     - pwd
     - ls -al
     - mkdir -p artifacts
-    #- ls .pio/build/FuelStationHardware_DEBUG
-    #- cp .pio/build/FuelStationHardware_DEBUG/GA_FUEL_TERMINAL*.elf artifacts/
-    #- cp .pio/build/FuelStationHardware_DEBUG/GA_FUEL_TERMINAL*.bin artifacts/
+    - ls .pio/build/FuelStationHardware_DEBUG
+    - cp .pio/build/FuelStationHardware_DEBUG/GA_FUEL_TERMINAL*.elf artifacts/
+    - cp .pio/build/FuelStationHardware_DEBUG/GA_FUEL_TERMINAL*.bin artifacts/
     - cp GA_FUEL_TERMINAL* artifacts/
     - ls -al artifacts/
   artifacts:
