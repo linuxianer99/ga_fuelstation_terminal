@@ -28,7 +28,7 @@ build_debug:
   artifacts:
     paths:
     - artifacts/GA_FUEL_TERMINAL*.bin
-    - artifacts/GA_FUEL_TERMINAL*.elf
+    #- artifacts/GA_FUEL_TERMINAL*.elf
 
 
 #release:
