@@ -21,9 +21,9 @@ build_debug:
     - ls -al
     - mkdir -p $CI_PROJECT_DIR/artifacts
     - ls .pio/build/FuelStationHardware_DEBUG
-    #- cp .pio/build/FuelStationHardware_DEBUG/GA_FUEL_TERMINAL*.elf $CI_PROJECT_DIR/artifacts
-    #- cp .pio/build/FuelStationHardware_DEBUG/GA_FUEL_TERMINAL*.bin $CI_PROJECT_DIR/artifacts
-    - cp GA_FUEL_TERMINAL* artifacts/
+    - cp .pio/build/FuelStationHardware_DEBUG/GA_FUEL_TERMINAL*.elf $CI_PROJECT_DIR/artifacts
+    - cp .pio/build/FuelStationHardware_DEBUG/GA_FUEL_TERMINAL*.bin $CI_PROJECT_DIR/artifacts
+    #- cp GA_FUEL_TERMINAL* artifacts/
     - ls -al $CI_PROJECT_DIR/artifacts/
   artifacts:
     paths:
