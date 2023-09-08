@@ -23,6 +23,7 @@ build_debug:
     - ls .pio/build/FuelStationHardware_DEBUG
     - cp .pio/build/FuelStationHardware_DEBUG/GA_FUEL_TERMINAL*.elf builds/
     - cp .pio/build/FuelStationHardware_DEBUG/GA_FUEL_TERMINAL*.bin builds/
+    - ls -al /builds
   artifacts:
     paths:
     - builds/*
