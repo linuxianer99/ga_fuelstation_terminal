@@ -26,7 +26,7 @@ build_debug:
     - ls -al artifacts/
   artifacts:
     paths:
-    - artifacts/*
+    - artifacts/GA_FUEL_TERMINAL*
 
 
 #release:
