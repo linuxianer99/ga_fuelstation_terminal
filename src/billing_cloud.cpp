@@ -32,7 +32,7 @@ int SendRefueling(t_refueling Refueling)
         /* Define our key*/
         byte base64_key[24];
         byte key[KEY_LENGTH];
-        Config.billingkey.getBytes(base64_key,24);
+        Config.billingkey.getBytes(base64_key, 24);
         decode_base64(base64_key, key);
 
         char s_amount[6];
@@ -80,7 +80,10 @@ int SendRefueling(t_refueling Refueling)
                 // Transfer successful    
                 return httpResponseCode;
             }
-
+            else if (httpResponseCode == 403)
+            {
+                return httpResponseCode;
+            }
         }
         // Transfer not successful!!
         log_e("Http Transfer not successful!");
@@ -111,6 +114,8 @@ void checkConnection(t_terminalStatus *ts)
         }
         
         doc["ip"] = ts->s_IP;
+        doc["status"] = ts->status;
+        log_i("Status: %d", ts->status);
         serializeJson(doc, requestBody);
         log_i("Message: %s", requestBody);
 

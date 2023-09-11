@@ -429,6 +429,7 @@ void loop() {
       else
       {
         TerminalState = OFFLINE;
+        TerminalStatus.status = connection_error;
       }
         
     break;
@@ -437,6 +438,7 @@ void loop() {
       ESP_LOGD("SM", "Entered state WAITCARD");
       lcd_WaitForTransponder();
       TerminalState=WAIT_CARD;
+      TerminalStatus.status=normal;
       lcd_Backlight(0);
     break;
 
@@ -599,6 +601,8 @@ void loop() {
     }
     else{
       lcd_SendDataResult(httpResult);
+      TerminalStatus.status=blocked;
+      //log_i("Set Terminal Status to: %d", TerminalStatus.status);
       while(1);
     }
       state_delay=50;

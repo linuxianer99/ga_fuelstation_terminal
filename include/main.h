@@ -16,6 +16,12 @@ enum t_terminalStates {
   SHOW_SUMMARY // Show Summary
 };
 
+enum t_status{
+  normal,
+  connection_error,
+  blocked
+};
+
 typedef struct {
     char aircraft[20];        // Callsign of the aircraft
     char article[20];  // Article
@@ -30,8 +36,11 @@ typedef struct  {
   char s_IP[16];
   unsigned int rebootReason;
   bool rebooted;
+  enum t_status status;
   uint32_t freeHeap;
 } t_terminalStatus;
+
+
 
 typedef struct {
   bool validcard = false; // Was a valid card read ??
