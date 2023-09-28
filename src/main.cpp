@@ -100,8 +100,14 @@ void checkWifi(t_terminalStatus *ts) {
 
 static void IRAM_ATTR pcnt_example_intr_handler(void *arg)
 {
-  multPulses ++;
-  PCNT.int_clr.val = BIT(PCNT_UNIT_0);
+    log_i("PCNT INT");
+
+    if (PCNT.int_st.val & BIT(PCNT_UNIT_0))
+    {
+      multPulses++;
+      PCNT.int_clr.val = BIT(PCNT_UNIT_0);
+      log_i("PCNT INT IF");
+    }
 }
 
 void initIO() {
@@ -133,7 +139,7 @@ void initIO() {
   ESP_LOGD("PCNT", "%d", result);                         // configura os registradores do Contador de Pulsos
 
   /* Enable events on zero, maximum and minimum limit values */
-  pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_ZERO);
+  //pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_ZERO);
   pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_H_LIM);
 
   pcnt_counter_pause(PCNT_UNIT_0);
@@ -142,7 +148,7 @@ void initIO() {
   /* Register ISR handler and enable interrupts for PCNT unit */
   pcnt_isr_register(pcnt_example_intr_handler, NULL, 0, NULL);
   pcnt_intr_enable(PCNT_UNIT_0);
-  pcnt_counter_resume(PCNT_UNIT_0);                       // reinicia o Contador de Pulsos
+  //pcnt_counter_resume(PCNT_UNIT_0);                       // reinicia o Contador de Pulsos
 
   pcnt_set_filter_value(PCNT_UNIT_0, 1023);
   pcnt_filter_enable(PCNT_UNIT_0);
@@ -557,6 +563,8 @@ void loop() {
 
           // Change State
           TerminalState=SEND_DATA_ENTRY;
+          // Stop counter
+          pcnt_counter_pause(PCNT_UNIT_0);
         }
       
       if (pump_timeout > Config.pump_timeout)
