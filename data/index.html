@@ -19,6 +19,15 @@
 </head>
 <body>
   <h2>%EEH_HOSTNAME%</h2>
+  <p>Firmware: %FIRMWARE% </p>
+  <hr>
+  <table>
+    <tr>
+      <th><p id="backend_state"></p></th>
+      <th><p id="terminal_state"></p></th>
+    </tr>
+  </table>
+  <hr>
   <input type="button" onclick="location.href='/update';" value="OTA Update" />
   <button onclick="listFilesButton()">List Files</button>
   <button onclick="showUploadButtonFancy()">Upload File</button>
@@ -32,12 +41,12 @@
 <script>
 
 
-function logoutButton() {
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", "/logout", true);
-  xhr.send();
-  setTimeout(function(){ window.open("/logged-out","_self"); }, %WEBPAGEDELAY%);
-}
+  function logoutButton() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/logout", true);
+    xhr.send();
+    setTimeout(function(){ window.open("/logged-out","_self"); }, %WEBPAGEDELAY%);
+  }
 
 function rebootButton() {
   document.getElementById("statusdetails").innerHTML = "Invoking Reboot ...";

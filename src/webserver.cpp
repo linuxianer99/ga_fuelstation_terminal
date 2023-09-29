@@ -6,6 +6,7 @@
 #include "config.h"
 #include "filesystem.h"
 #include "main.h"
+#include "version.h"
 
 extern t_Config Config;
 extern bool shouldReboot;
@@ -82,9 +83,9 @@ String processor(const String& var) {
         return String(TerminalState);
     }
 
-//   if (var == "FIRMWARE") {
-//     return FIRMWARE_VERSION;
-//   }
+   if (var == "FIRMWARE") {
+     return VERSION;
+   }
 
 //   if (var == "FREESPIFFS") {
 //     return humanReadableSize((SPIFFS.totalBytes() - SPIFFS.usedBytes()));
