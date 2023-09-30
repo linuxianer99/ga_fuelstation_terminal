@@ -23,8 +23,9 @@
   <hr>
   <table>
     <tr>
-      <th><p id="backend_state"></p></th>
-      <th><p id="terminal_state"></p></th>
+      <th>Backend Connection: <span id="backend_state"></span></th>
+      <th width="60px">&nbsp;</th>
+      <th>Terminal State: <span id="terminal_state"></span></th>
     </tr>
   </table>
   <hr>
@@ -40,6 +41,22 @@
   <p id="configdetails"></p>
 <script>
 
+  addEventListener('DOMContentLoaded', renew, setInterval(renew, 1000));
+
+  function renew() {
+    fetch('/status').then(response => {
+      return response.json();
+    }).then(data => {
+      // work with json here
+      console.log(data);
+      backend_state.innerHTML = data.b;
+
+      const status = ["normal","connection_error","blocked","waitcard","pumpon"];
+      terminal_state.innerHTML = status[data.t];
+    }).catch(err => {
+      console.log("Error");
+    });
+  }
 
   function logoutButton() {
     var xhr = new XMLHttpRequest();

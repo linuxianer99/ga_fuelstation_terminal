@@ -3,6 +3,7 @@
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
 #include <LittleFS.h>
+#include <ArduinoJson.h>
 #include "config.h"
 #include "filesystem.h"
 #include "main.h"
@@ -11,6 +12,7 @@
 extern t_Config Config;
 extern bool shouldReboot;
 extern t_terminalStates TerminalState;
+extern t_terminalStatus TerminalStatus;
 
 void notFound(AsyncWebServerRequest *request) {
   log_i("Page not found");
@@ -233,6 +235,18 @@ void configureWebServer(AsyncWebServer *server) {
             //syslog.log(logmessage);
             return request->requestAuthentication();
         }
+    });
+
+    server->on("/status", HTTP_GET, [](AsyncWebServerRequest * request)
+    {
+        StaticJsonDocument<200> doc;
+        String requestBody;
+
+         // Add data
+        doc["b"] = TerminalStatus.connected;
+        doc["t"] = TerminalStatus.status;
+        serializeJson(doc, requestBody);
+        request->send(200, "application/json", requestBody);
     });
 
     log_i("Configuring OTA Webserver ...");

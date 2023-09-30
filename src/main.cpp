@@ -444,7 +444,7 @@ void loop() {
       ESP_LOGD("SM", "Entered state WAITCARD");
       lcd_WaitForTransponder();
       TerminalState=WAIT_CARD;
-      TerminalStatus.status=normal;
+      TerminalStatus.status = waitcard;
       lcd_Backlight(0);
     break;
 
@@ -530,6 +530,8 @@ void loop() {
       pump_timeout = 0;
 
       TerminalState=COUNT_FUEL;
+
+      TerminalStatus.status = pumpon;
     break;
 
     case COUNT_FUEL:

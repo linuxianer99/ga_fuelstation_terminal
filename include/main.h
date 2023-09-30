@@ -19,7 +19,9 @@ enum t_terminalStates {
 enum t_status{
   normal,
   connection_error,
-  blocked
+  blocked,
+  waitcard,
+  pumpon
 };
 
 typedef struct {
