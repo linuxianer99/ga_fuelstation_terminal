@@ -90,6 +90,8 @@ void checkWifi(t_terminalStatus *ts) {
   if (WiFi.status() == WL_CONNECTED)
   {
     ts->wifi=1;
+    ts->wifi_rssi=WiFi.RSSI();
+    ESP_LOGD("WIFI", "RSSI: %d", WiFi.RSSI());
   }
   else
   {
@@ -445,7 +447,9 @@ void loop() {
       lcd_WaitForTransponder();
       TerminalState=WAIT_CARD;
       TerminalStatus.status = waitcard;
+#ifdef BACKLIGHT_DIM
       lcd_Backlight(0);
+#endif
     break;
 
     case WAIT_CARD:

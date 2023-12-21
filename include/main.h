@@ -34,7 +34,8 @@ typedef struct {
 typedef struct  {
   int pump;
   int connected;
-  int wifi; 
+  int wifi;
+  int wifi_rssi;
   char s_IP[16];
   unsigned int rebootReason;
   bool rebooted;

@@ -115,6 +115,7 @@ void checkConnection(t_terminalStatus *ts)
         
         doc["ip"] = ts->s_IP;
         doc["status"] = ts->status;
+        doc["rssi"] = ts->wifi_rssi;
         log_i("Status: %d", ts->status);
         serializeJson(doc, requestBody);
         log_i("Message: %s", requestBody);

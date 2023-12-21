@@ -124,7 +124,13 @@ void lcd_UpdateStatus(t_refueling rf, t_terminalStatus ts)
     lcd.write(0x6f);
   }
 
-  // Show LAN connetion status
+  // Show Wifi RSSI
+  lcd.setCursor(12,3);
+  char buffer[6];
+  snprintf(buffer, 6, "R:%d", ts.wifi_rssi);
+  lcd.print(buffer);
+
+  // Show network connetion status
   lcd.setCursor(18,3);
   if (ts.wifi)
   {
