@@ -7,7 +7,7 @@
 #include <lcd.h>
 #include <LiquidCrystal_I2C.h>
 
-#include <EthernetENC.h>
+//#include <EthernetENC.h>
 #include <WiFi.h>
 
 #include <HTTPClient.h>
