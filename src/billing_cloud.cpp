@@ -89,6 +89,7 @@ int SendRefueling(t_refueling Refueling)
         log_e("Http Transfer not successful!");
         return(httpResponseCode);
     }
+    return(1);
 }
 
 
