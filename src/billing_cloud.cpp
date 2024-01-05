@@ -37,7 +37,7 @@ int SendRefueling(t_refueling Refueling)
 
         char s_amount[6];
         unsigned char base64[32];
-        snprintf(s_amount,6,"%.2f", Refueling.amount);
+        snprintf(s_amount,6,"%.1f", Refueling.amount);
 
 
         // Calculate HMAC for message

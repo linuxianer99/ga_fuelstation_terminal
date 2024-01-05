@@ -89,7 +89,7 @@ void lcd_UpdateFuelCount(t_refueling rf)
 {
   char buffer[16];
   lcd.setCursor(9,1);
-  snprintf(buffer, 16, "%.2f", rf.amount);
+  snprintf(buffer, 16, "%.1f", rf.amount);
   lcd.print(buffer);
 
 }
