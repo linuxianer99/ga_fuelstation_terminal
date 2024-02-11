@@ -139,6 +139,10 @@ void lcd_UpdateStatus(t_refueling rf, t_terminalStatus ts)
   else
   {
     lcd.write('n');
+    lcd.setCursor(7,3);
+    char buffer[3];
+    snprintf(buffer, 3, "%d", ts.wifi_state);
+    lcd.print(buffer);
   }
 
   // Show Server connection status

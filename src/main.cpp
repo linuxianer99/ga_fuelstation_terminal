@@ -77,6 +77,10 @@ t_Config Config;
 void initWiFi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(Config.ssid.c_str(), Config.wifipassword.c_str());
+#ifdef LOW_WIFI_POWE
+  WiFi.setTxPower(WIFI_POWER_2dBm);
+#endif
+  ESP_LOGD("WIFI", "TX Power: %d", WiFi.getTxPower());
   ESP_LOGD("WIFI", "Connecting to WiFi ..");
   while (WiFi.status() != WL_CONNECTED) {
     ESP_LOGD("WIFI", ".");
@@ -90,12 +94,14 @@ void checkWifi(t_terminalStatus *ts) {
   if (WiFi.status() == WL_CONNECTED)
   {
     ts->wifi=1;
+    ts->wifi_state=WiFi.status();;
     ts->wifi_rssi=WiFi.RSSI();
     ESP_LOGD("WIFI", "RSSI: %d", WiFi.RSSI());
   }
   else
   {
     ts->wifi=0;
+    ts->wifi_state=WiFi.status();
   }
 }
 
