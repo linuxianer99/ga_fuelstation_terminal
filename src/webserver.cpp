@@ -15,8 +15,7 @@ extern t_terminalStates TerminalState;
 extern t_terminalStatus TerminalStatus;
 
 void notFound(AsyncWebServerRequest *request) {
-  log_i("Page not found");
-  //syslog.log(logmessage);
+  ESP_LOGE("Web", "Page not found");
   request->send(404, "text/plain", "Not found");
 }
 
@@ -25,7 +24,7 @@ bool checkUserWebAuth(AsyncWebServerRequest * request) {
     bool isAuthenticated = false;
 
     if (request->authenticate(Config.httpuser.c_str(), Config.httppassword.c_str())) {
-        log_i("is authenticated via username and password");
+        ESP_LOGD("Web", "is authenticated via username and password");
         isAuthenticated = true;
     }
     return isAuthenticated;
@@ -40,31 +39,27 @@ void handleUpload(AsyncWebServerRequest *request, String filename, size_t index,
     }
 
     String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-    log_i("%s", logmessage.c_str());
-    //syslog.log(logmessage);
+    ESP_LOGD("Web", "%s", logmessage.c_str());
 
     if (!index) {
         logmessage = "Upload Start: " + String(filename);
         // open the file on first call and store the file handle in the request object
         request->_tempFile = LittleFS.open("/" + filename, "w");
-        log_i("%s", logmessage.c_str());
-        //syslog.log(logmessage);
+        ESP_LOGD("Web", "%s", logmessage.c_str());
     }
 
     if (len) {
         // stream the incoming chunk to the opened file
         request->_tempFile.write(data, len);
         logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-        log_i("%s", logmessage.c_str());
-        //syslog.log(logmessage);
+        ESP_LOGD("Web", "%s", logmessage.c_str());
     }
 
     if (final) {
         logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
         // close the file handle as the upload is now done
         request->_tempFile.close();
-        log_i("%s", logmessage.c_str());
-        //syslog.log(logmessage);
+        ESP_LOGD("Web", "%s", logmessage.c_str());
         request->redirect("/");
     }
 }
@@ -107,14 +102,13 @@ String processor(const String& var) {
 
 void configureWebServer(AsyncWebServer *server) {
     // configure web server
-    log_i("Setup Webserver");
+    ESP_LOGD("Web", "Setup Webserver");
     // if url isn't found
     server->onNotFound(notFound);
 
     server->on("/health", HTTP_GET, [](AsyncWebServerRequest * request) {
         String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-        log_i("%s", logmessage);
-        //syslog.log(logmessage);
+        ESP_LOGD("Web", "%s", logmessage);
         request->send(200, "text/plain", "OK");
     });
 
@@ -133,7 +127,6 @@ void configureWebServer(AsyncWebServer *server) {
       Serial.printf("HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
       }
     */
-        //syslog.log(logmessage);
         request->send(LittleFS, "/index.html", String(), false, processor);
 
     });
@@ -144,14 +137,12 @@ void configureWebServer(AsyncWebServer *server) {
         if (checkUserWebAuth(request)) {
             request->send(LittleFS, "/reboot.html");
             logmessage += " Auth: Success";
-            log_i("%s", logmessage);
-            //syslog.log(logmessage);
+            ESP_LOGD("Web", "%s", logmessage);
             shouldReboot = true;
         }
         else {
             logmessage += " Auth: Failed";
-            log_i("%s", logmessage);
-            //syslog.log(logmessage);
+            ESP_LOGD("Web", "%s", logmessage);
             return request->requestAuthentication();
         }
 
@@ -169,8 +160,7 @@ void configureWebServer(AsyncWebServer *server) {
         String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
         if (checkUserWebAuth(request)) {
             logmessage += " Auth: Success";
-            log_i("%s", logmessage.c_str());
-            //syslog.log(logmessage);
+            ESP_LOGD("Web", "%s", logmessage.c_str());
 
             //printWebAdminArgs(request);
 
@@ -181,13 +171,11 @@ void configureWebServer(AsyncWebServer *server) {
                 logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url() + "?name=" + String(fileName) + "&action=" + String(fileAction);
 
                 if (!LittleFS.exists(fileName)) {
-                    log_i("%s ERROR: file does not exist", logmessage.c_str());
-                    //syslog.log(logmessage + " ERROR: file does not exist");
+                    ESP_LOGE("Web", "%s ERROR: file does not exist", logmessage.c_str());
                     request->send(400, "text/plain", "ERROR: file does not exist");
                 }
                 else {
-                    log_i("%s file exists", logmessage.c_str());
-                    //syslog.log(logmessage + " file exists");
+                    ESP_LOGD("Web", "%s file exists", logmessage.c_str());
                     if (strcmp(fileAction, "download") == 0) {
                         logmessage += " downloaded";
                         request->send(LittleFS, fileName, "application/octet-stream");
@@ -201,8 +189,7 @@ void configureWebServer(AsyncWebServer *server) {
                         logmessage += " ERROR: invalid action param supplied";
                         request->send(400, "text/plain", "ERROR: invalid action param supplied");
                     }
-                    log_i("%s", logmessage.c_str());
-                    //syslog.log(logmessage);
+                    ESP_LOGD("Web", "%s", logmessage.c_str());
                 }
             }
             else {
@@ -211,8 +198,7 @@ void configureWebServer(AsyncWebServer *server) {
         }
         else {
             logmessage += " Auth: Failed";
-            log_i("%s", logmessage.c_str());
-            //syslog.log(logmessage);
+            ESP_LOGE("Web", "%s", logmessage.c_str());
             return request->requestAuthentication();
         }
     });
@@ -225,14 +211,12 @@ void configureWebServer(AsyncWebServer *server) {
         String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
         if (checkUserWebAuth(request)) {
             logmessage += " Auth: Success";
-            log_i("%s", logmessage.c_str());
-            //syslog.log(logmessage);
+            ESP_LOGD("Web", "%s", logmessage.c_str());
             request->send(200, "text/plain", listFiles(true));
         }
         else {
             logmessage += " Auth: Failed";
-            log_i("%s", logmessage.c_str());
-            //syslog.log(logmessage);
+            ESP_LOGD("Web", "%s", logmessage.c_str());
             return request->requestAuthentication();
         }
     });
@@ -249,8 +233,8 @@ void configureWebServer(AsyncWebServer *server) {
         request->send(200, "application/json", requestBody);
     });
 
-    log_i("Configuring OTA Webserver ...");
+    ESP_LOGI("Web", "Configuring OTA Webserver ...");
     AsyncElegantOTA.begin(server, Config.httpuser.c_str(), Config.httppassword.c_str());
-    log_i("Starting Webserver ...");
+    ESP_LOGI("Web", "Starting Webserver ...");
     server->begin();
 }

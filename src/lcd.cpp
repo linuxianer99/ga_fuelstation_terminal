@@ -162,7 +162,6 @@ void lcd_ShowAircraft(t_refueling rf){
   char buffer[20];
   lcd.clear();
   lcd.setCursor(0,0);
-  ESP_LOGD("LCD", "Article: %s", rf.article);
   snprintf(buffer, 16, rf.aircraft);
   lcd.print(buffer);
 

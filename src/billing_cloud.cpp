@@ -51,7 +51,7 @@ int SendRefueling(t_refueling Refueling)
         hmac.doFinal(authCode);
 
         unsigned int base64_length = encode_base64(authCode, 32, base64);
-        log_i("Base64: %s Length: %d", base64, base64_length);
+        ESP_LOGD("Billing", "Base64: %s Length: %d", base64, base64_length);
 
         // Add data
         doc["aircraft"] = Refueling.aircraft;
@@ -60,18 +60,18 @@ int SendRefueling(t_refueling Refueling)
         doc["memberid"] = Refueling.memberid;
         doc["auth"] = base64;
         serializeJson(doc, requestBody);
-        log_i("Message: %s", requestBody);
+        ESP_LOGD("Billing", "Message: %s", requestBody);
         
         while (retry_count)
         {
-            log_i("Try to connect billing server %s", Config.billingserver.c_str() + Config.terminal_id);
+            ESP_LOGD("Billing", "Try to connect billing server %s", Config.billingserver.c_str() + Config.terminal_id);
             // Handle retry counter
             retry_count--;
             // Try http POST
             https.begin(*client, Config.billingserver + "/" + Config.terminal_id);
             https.addHeader("Content-Type", "application/json");
             httpResponseCode = https.POST(requestBody);
-            log_i("Server Respone %d", httpResponseCode);
+            ESP_LOGD("Billing", "Server Respone %d", httpResponseCode);
             https.end();
             client->stop();
             delete client;
@@ -86,7 +86,7 @@ int SendRefueling(t_refueling Refueling)
             }
         }
         // Transfer not successful!!
-        log_e("Http Transfer not successful!");
+        ESP_LOGE("Billing", "Http Transfer not successful!");
         return(httpResponseCode);
     }
     return(1);
@@ -117,9 +117,9 @@ void checkConnection(t_terminalStatus *ts)
         doc["ip"] = ts->s_IP;
         doc["status"] = ts->status;
         doc["rssi"] = ts->wifi_rssi;
-        log_i("Status: %d", ts->status);
+        ESP_LOGD("Billing", "Status: %d", ts->status);
         serializeJson(doc, requestBody);
-        log_i("Message: %s", requestBody);
+        ESP_LOGD("Billing", "Message: %s", requestBody);
 
         https.begin(*client, Config.billingserver + "/" + Config.terminal_id + "/status");
         //https.begin(Config.billingserver + "/" + Config.terminal_id + "/status");
@@ -128,11 +128,11 @@ void checkConnection(t_terminalStatus *ts)
         httpResponseCode = https.POST(requestBody);
         
         if (httpResponseCode>0) {
-            log_i("Terminal connected");
+            ESP_LOGD("Billing", "Terminal connected");
             ts->connected = 1; 
         }
         else {
-            log_i("Terminal NOT connected");
+            ESP_LOGD("Billing", "Terminal NOT connected");
             ts->connected = 0;
         }
         

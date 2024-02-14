@@ -80,14 +80,14 @@ void initWiFi() {
 #ifdef LOW_WIFI_POWE
   WiFi.setTxPower(WIFI_POWER_2dBm);
 #endif
-  ESP_LOGD("WIFI", "TX Power: %d", WiFi.getTxPower());
-  ESP_LOGD("WIFI", "Connecting to WiFi ..");
+  ESP_LOGI("WIFI", "TX Power: %d", WiFi.getTxPower());
+  ESP_LOGI("WIFI", "Connecting to WiFi ..");
   while (WiFi.status() != WL_CONNECTED) {
     ESP_LOGD("WIFI", ".");
     delay(1000);
   }
   TerminalStatus.wifi=1;
-  ESP_LOGD("WIFI", "Local IP:", WiFi.localIP().toString());
+  ESP_LOGI("WIFI", "Local IP:", WiFi.localIP().toString());
 }
 
 void checkWifi(t_terminalStatus *ts) {
@@ -96,7 +96,7 @@ void checkWifi(t_terminalStatus *ts) {
     ts->wifi=1;
     ts->wifi_state=WiFi.status();;
     ts->wifi_rssi=WiFi.RSSI();
-    ESP_LOGD("WIFI", "RSSI: %d", WiFi.RSSI());
+    ESP_LOGV("WIFI", "RSSI: %d", WiFi.RSSI());
   }
   else
   {
@@ -108,13 +108,10 @@ void checkWifi(t_terminalStatus *ts) {
 
 static void IRAM_ATTR pcnt_example_intr_handler(void *arg)
 {
-    log_i("PCNT INT");
-
     if (PCNT.int_st.val & BIT(PCNT_UNIT_0))
     {
       multPulses++;
       PCNT.int_clr.val = BIT(PCNT_UNIT_0);
-      log_i("PCNT INT IF");
     }
 }
 
@@ -144,7 +141,7 @@ void initIO() {
   };
   int result;
   result=pcnt_unit_config(&pcntFreqConfig);
-  ESP_LOGD("PCNT", "%d", result);                         // configura os registradores do Contador de Pulsos
+  ESP_LOGV("PCNT", "%d", result);                         // configura os registradores do Contador de Pulsos
 
   /* Enable events on zero, maximum and minimum limit values */
   //pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_ZERO);
@@ -191,7 +188,7 @@ void updateStatus(void * paramter)
   {
     if (TerminalState == SEND_DATA_ENTRY || TerminalState == SEND_DATA)
     {
-      log_i("Update Status - SUSPENDED");
+      ESP_LOGV("Status Update", "Update Status - SUSPENDED");
       heartbeat_suspended++;  
     }    
     else
@@ -205,9 +202,9 @@ void updateStatus(void * paramter)
     if (!TerminalStatus.wifi || !TerminalStatus.connected)
       TerminalState=OFFLINE_ENTRY;
 
-      log_i("Update Status");
+      ESP_LOGV("Staus Update","Update Status");
       unsigned int temp = uxTaskGetStackHighWaterMark(nullptr);
-      log_i("Suspended cntr: %d", heartbeat_suspended);
+      ESP_LOGV("Status Update", "Suspended cntr: %d", heartbeat_suspended);
     }
     vTaskDelay(Config.heartbeat / portTICK_PERIOD_MS);
   }
@@ -217,22 +214,22 @@ void print_reset_reason(int reason)
 {
   switch ( reason)
   {
-    case 1 : Serial.println ("POWERON_RESET");break;          /**<1,  Vbat power on reset*/
-    case 3 : Serial.println ("SW_RESET");break;               /**<3,  Software reset digital core*/
-    case 4 : Serial.println ("OWDT_RESET");break;             /**<4,  Legacy watch dog reset digital core*/
-    case 5 : Serial.println ("DEEPSLEEP_RESET");break;        /**<5,  Deep Sleep reset digital core*/
-    case 6 : Serial.println ("SDIO_RESET");break;             /**<6,  Reset by SLC module, reset digital core*/
-    case 7 : Serial.println ("TG0WDT_SYS_RESET");break;       /**<7,  Timer Group0 Watch dog reset digital core*/
-    case 8 : Serial.println ("TG1WDT_SYS_RESET");break;       /**<8,  Timer Group1 Watch dog reset digital core*/
-    case 9 : Serial.println ("RTCWDT_SYS_RESET");break;       /**<9,  RTC Watch dog Reset digital core*/
-    case 10 : Serial.println ("INTRUSION_RESET");break;       /**<10, Instrusion tested to reset CPU*/
-    case 11 : Serial.println ("TGWDT_CPU_RESET");break;       /**<11, Time Group reset CPU*/
-    case 12 : Serial.println ("SW_CPU_RESET");break;          /**<12, Software reset CPU*/
-    case 13 : Serial.println ("RTCWDT_CPU_RESET");break;      /**<13, RTC Watch dog Reset CPU*/
-    case 14 : Serial.println ("EXT_CPU_RESET");break;         /**<14, for APP CPU, reseted by PRO CPU*/
-    case 15 : Serial.println ("RTCWDT_BROWN_OUT_RESET");break;/**<15, Reset when the vdd voltage is not stable*/
-    case 16 : Serial.println ("RTCWDT_RTC_RESET");break;      /**<16, RTC Watch dog reset digital core and rtc module*/
-    default : Serial.println ("NO_MEAN");
+    case 1 : ESP_LOGI("Reboot reason", "POWERON_RESET");break;          /**<1,  Vbat power on reset*/
+    case 3 : ESP_LOGI("Reboot reason", "SW_RESET");break;               /**<3,  Software reset digital core*/
+    case 4 : ESP_LOGI("Reboot reason", "OWDT_RESET");break;             /**<4,  Legacy watch dog reset digital core*/
+    case 5 : ESP_LOGI("Reboot reason", "DEEPSLEEP_RESET");break;        /**<5,  Deep Sleep reset digital core*/
+    case 6 : ESP_LOGI("Reboot reason", "SDIO_RESET");break;             /**<6,  Reset by SLC module, reset digital core*/
+    case 7 : ESP_LOGI("Reboot reason", "TG0WDT_SYS_RESET");break;       /**<7,  Timer Group0 Watch dog reset digital core*/
+    case 8 : ESP_LOGI("Reboot reason", "TG1WDT_SYS_RESET");break;       /**<8,  Timer Group1 Watch dog reset digital core*/
+    case 9 : ESP_LOGI("Reboot reason", "RTCWDT_SYS_RESET");break;       /**<9,  RTC Watch dog Reset digital core*/
+    case 10 : ESP_LOGI("Reboot reason", "INTRUSION_RESET");break;       /**<10, Instrusion tested to reset CPU*/
+    case 11 : ESP_LOGI("Reboot reason", "TGWDT_CPU_RESET");break;       /**<11, Time Group reset CPU*/
+    case 12 : ESP_LOGI("Reboot reason", "SW_CPU_RESET");break;          /**<12, Software reset CPU*/
+    case 13 : ESP_LOGI("Reboot reason", "RTCWDT_CPU_RESET");break;      /**<13, RTC Watch dog Reset CPU*/
+    case 14 : ESP_LOGI("Reboot reason", "EXT_CPU_RESET");break;         /**<14, for APP CPU, reseted by PRO CPU*/
+    case 15 : ESP_LOGI("Reboot reason", "RTCWDT_BROWN_OUT_RESET");break;/**<15, Reset when the vdd voltage is not stable*/
+    case 16 : ESP_LOGI("Reboot reason", "RTCWDT_RTC_RESET");break;      /**<16, RTC Watch dog reset digital core and rtc module*/
+    default : ESP_LOGI("Reboot reason", "NO_MEAN");
   }
 }
 
@@ -246,7 +243,7 @@ void setup() {
   print_reset_reason(rebootReason);
   init_FS();
 
-  log_i("Loading Configuration ...");
+  ESP_LOGI("Config", "Loading Configuration ...");
   loadConfiguration(filename, Config);
   printConfig(Config);
 
@@ -320,7 +317,7 @@ bool handle_chipcard(t_chipcard *cc)
   // Authenticate to PICC for Aircraft and Article
   status = mfrc522.PCD_Authenticate(MFRC522::PICC_Command::PICC_CMD_MF_AUTH_KEY_A, BLOCK_AIRCRAFT, &key, &(mfrc522.uid));
   if (status != MFRC522::StatusCode::STATUS_OK) {
-    ESP_LOGD("SC", "Authentication failed: block AIRCRAFT ");
+    ESP_LOGE("SC", "Authentication failed: block AIRCRAFT ");
     return false;
   }
 
@@ -330,7 +327,7 @@ bool handle_chipcard(t_chipcard *cc)
 
   status = mfrc522.MIFARE_Read(block, buffer, &len);
   if (status != MFRC522::StatusCode::STATUS_OK) {
-    ESP_LOGD("SC", "Reading falied: aircraft");
+    ESP_LOGE("SC", "Reading falied: aircraft");
     return false;
   }
 
@@ -343,7 +340,7 @@ bool handle_chipcard(t_chipcard *cc)
 
   status = mfrc522.MIFARE_Read(block, buffer, &len);
   if (status != MFRC522::StatusCode::STATUS_OK) {
-    ESP_LOGD("SC", "Reading failed: suffix");
+    ESP_LOGE("SC", "Reading failed: suffix");
     return false;
   }
 
@@ -354,7 +351,7 @@ bool handle_chipcard(t_chipcard *cc)
   // Authenticate to PICC for memberid
   status = mfrc522.PCD_Authenticate(MFRC522::PICC_Command::PICC_CMD_MF_AUTH_KEY_A, BLOCK_MEMBERID, &key, &(mfrc522.uid));
   if (status != MFRC522::StatusCode::STATUS_OK) {
-    ESP_LOGD("SC", "Authentication failed: block AIRCRAFT ");
+    ESP_LOGE("SC", "Authentication failed: block AIRCRAFT ");
     return false;
   }
 
@@ -364,7 +361,7 @@ bool handle_chipcard(t_chipcard *cc)
 
   status = mfrc522.MIFARE_Read(block, buffer, &len);
   if (status != MFRC522::StatusCode::STATUS_OK) {
-    ESP_LOGD("SC", "Reading falied: aircraft");
+    ESP_LOGE("SC", "Reading falied: aircraft");
     return false;
   }
 
@@ -374,7 +371,7 @@ bool handle_chipcard(t_chipcard *cc)
 
   status = mfrc522.PCD_Authenticate(MFRC522::PICC_Command::PICC_CMD_MF_AUTH_KEY_A, BLOCK_HASH, &key, &(mfrc522.uid));
   if (status != MFRC522::StatusCode::STATUS_OK) {
-    ESP_LOGD("SC", "Authentication failed: block HASH");
+    ESP_LOGE("SC", "Authentication failed: block HASH");
     return false;
   }
 
@@ -384,7 +381,7 @@ bool handle_chipcard(t_chipcard *cc)
 
   status = mfrc522.MIFARE_Read(block, buffer, &len);
   if (status != MFRC522::StatusCode::STATUS_OK) {
-    ESP_LOGD("SC", "Reading failed: hash");
+    ESP_LOGE("SC", "Reading failed: hash");
     return false;
   }
 
@@ -397,7 +394,7 @@ bool handle_chipcard(t_chipcard *cc)
 
   status = mfrc522.MIFARE_Read(block+1, buffer, &len);
   if (status != MFRC522::StatusCode::STATUS_OK) {
-    ESP_LOGD("SC", "Reading failed: hash");
+    ESP_LOGE("SC", "Reading failed: hash");
     return false;
   }
  
@@ -480,7 +477,7 @@ void loop() {
         Refueling.amount = 0.0;
 
         // Print info for debug
-        ESP_LOGI("SM", "Create Refueling: Aircraft: %s, MemberID: %s, Article: %s, Amount: %f", \
+        ESP_LOGD("SM", "Create Refueling: Aircraft: %s, MemberID: %s, Article: %s, Amount: %f", \
           Refueling.aircraft, Refueling.memberid, Refueling.article, Refueling.amount);
 
         // Jump to next state
@@ -607,7 +604,7 @@ void loop() {
 
       // Send Data to Cloud
       httpResult = SendRefueling(Refueling);
-      log_d("HTTP Response %d", httpResult);
+      ESP_LOGV("HTTP", "HTTP Response %d", httpResult);
       ESP_LOGD("SM", "Data sent to Cloud");
       // Change State
       TerminalState=SHOW_SUMMARY_ENTRY;

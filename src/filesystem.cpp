@@ -23,21 +23,21 @@ void init_FS()
     // Try to mount FS
     if(!LittleFS.begin(true))
     {
-        log_i("An Error has occurred while mounting SPIFFS");
+        ESP_LOGE("FS", "An Error has occurred while mounting SPIFFS");
         //rebootESP("ERROR: Cannot mount SPIFFS, Rebooting");
         return;
     }
 
-    log_i("FS Free: %s", humanReadableSize(LittleFS.totalBytes() - LittleFS.usedBytes()));
-    log_i("FS Used: %s", humanReadableSize(LittleFS.usedBytes()));
-    log_i("FS Total: %s", humanReadableSize(LittleFS.totalBytes()));
+    ESP_LOGI("FS", "FS Free: %s", humanReadableSize(LittleFS.totalBytes() - LittleFS.usedBytes()));
+    ESP_LOGI("FS", "FS Used: %s", humanReadableSize(LittleFS.usedBytes()));
+    ESP_LOGI("FS", "FS Total: %s", humanReadableSize(LittleFS.totalBytes()));
 
 }
 
 
 void saveConfiguration(const char *filename, const t_Config &config) {
   
-  log_i("Save configfile %s", filename);
+  ESP_LOGI("FS", "Save configfile %s", filename);
 
   // Delete existing file, otherwise the configuration is appended to the file
   LittleFS.remove(filename);
@@ -45,7 +45,7 @@ void saveConfiguration(const char *filename, const t_Config &config) {
   // Open file for writing
   File file = LittleFS.open(filename, FILE_WRITE);
   if (!file) {
-    log_e("Failed to create file");
+    ESP_LOGE("FS", "Failed to create file");
     return;
   }
 
@@ -71,7 +71,7 @@ void saveConfiguration(const char *filename, const t_Config &config) {
 
   // Serialize JSON to file
   if (serializeJson(doc, file) == 0) {
-    log_e("Failed to write to file");
+    ESP_LOGE("FS", "Failed to write to file");
   }
 
   // need to print out the deserialisation to discern size
@@ -83,7 +83,7 @@ void saveConfiguration(const char *filename, const t_Config &config) {
 // list all of the files, if ishtml=true, return html rather than simple text
 String listFiles(bool ishtml) {
     String returnText = "";
-    log_i("Listing files stored on SPIFFS");
+    ESP_LOGD("FS", "Listing files stored on SPIFFS");
     File root = LittleFS.open("/");
     File foundfile = root.openNextFile();
     if (ishtml) {
@@ -109,24 +109,24 @@ String listFiles(bool ishtml) {
 }
 
 void loadConfiguration(const char *filename, t_Config &config) {
-    log_i("Loading configuration from %s", String(filename));
+    ESP_LOGD("FS", "Loading configuration from %s", String(filename));
 
     // flag used to detect if a default value is loaded, if default value loaded initiate a save after load
     bool initiatesave = false;
 
     if (!LittleFS.exists(filename)) {
-        log_i("%s not found", String(filename));
+        ESP_LOGD("FS", "%s not found", String(filename));
         initiatesave = true;
     } else {
-        log_i("%s found", String(filename));
+        ESP_LOGD("FS", "%s found", String(filename));
     }
 
     // Open file for reading
-    log_i("Opening %s", String(filename));
+    ESP_LOGD("FS", "Opening %s", String(filename));
     File file = LittleFS.open(filename);
 
     if (!file) {
-        log_e("ERROR: Failed to open file %s", String(filename));
+        ESP_LOGE("FS", "ERROR: Failed to open file %s", String(filename));
         return;
     }
 
@@ -135,14 +135,11 @@ void loadConfiguration(const char *filename, t_Config &config) {
     // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, file);
     if (error) {
-        log_e("Failed to process configuration file, will load default configuration");
-        log_e("===ERROR===");
-        log_e("%s", error.c_str());
-        log_e("===========");
+        ESP_LOGE("FS", "Failed to process configuration file, will load default configuration");
+        ESP_LOGE("FS", "===ERROR===");
+        ESP_LOGE("FS", "%s", error.c_str());
+        ESP_LOGE("FS", "===========");
     }
-
-    log_i("Deser done");
-    
 
     // Copy values from the JsonDocument to the Config
     config.terminal_id = doc["terminal_id"].as<String>();
@@ -188,9 +185,7 @@ void loadConfiguration(const char *filename, t_Config &config) {
     }
 
     config.billingserver = doc["billingserver"].as<String>();
-    log_i("Parsing Billing Server");
     if (config.billingserver == "null") {
-        log_i("not found in config");
         initiatesave = true;
         config.billingserver = default_billingserver;
     }
@@ -234,25 +229,23 @@ void loadConfiguration(const char *filename, t_Config &config) {
         config.pump_timeout = default_pump_timeout;
     }
 
-    log_i("Copy config done");
-
     file.close();
 
     if (initiatesave) {
-        log_i("Default configuration values loaded, saving configuration to %s", String(filename));
+        ESP_LOGI("FS", "Default configuration values loaded, saving configuration to %s", String(filename));
         saveConfiguration(filename, config);
     }
 }
 
 
 void printConfig(t_Config &config) {
-  log_i("         terminal id: %s", config.terminal_id);
-  log_i("              device: %s", config.device);
-  log_i("                ssid: %s", config.ssid);
-  log_i("        wifipassword: %s", config.wifipassword);
-  log_i("            fuelsort: %s", config.fuelsort);
-  log_i("         calibration: %f", config.calibration);
-  log_i("        pump timeout: %d", config.pump_timeout);
+  ESP_LOGI("FS", "         terminal id: %s", config.terminal_id);
+  ESP_LOGI("FS", "              device: %s", config.device);
+  ESP_LOGI("FS", "                ssid: %s", config.ssid);
+  ESP_LOGI("FS", "        wifipassword: %s", config.wifipassword);
+  ESP_LOGI("FS", "            fuelsort: %s", config.fuelsort);
+  ESP_LOGI("FS", "         calibration: %f", config.calibration);
+  ESP_LOGI("FS", "        pump timeout: %d", config.pump_timeout);
 
 }
 
@@ -261,12 +254,12 @@ void printFile(const char *filename) {
   // Open file for reading
   File file = LittleFS.open(filename);
   if (!file) {
-    log_e("Failed to read file");
+    ESP_LOGE("FS", "Failed to read file");
     return;
   }
   // Extract each characters by one by one
   while (file.available()) {
-    log_i("%c", (char)file.read());
+    ESP_LOGD("FS", "%c", (char)file.read());
   }
 
   // Close the file
