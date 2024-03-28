@@ -7,9 +7,11 @@
 #include <lcd.h>
 #include <LiquidCrystal_I2C.h>
 
-//#include <EthernetENC.h>
+//#include <ETH.h>
+#include <SPI.h>
 #include <WiFi.h>
 
+#include "time.h"
 #include <HTTPClient.h>
 
 #include "filesystem.h"
@@ -22,6 +24,7 @@
 #include "soc/pcnt_struct.h"
 
 #include "billing_cloud.h"
+#include "process_refueling.h"
 
 #include "esp32s3/rom/rtc.h"
 
@@ -47,10 +50,12 @@ MFRC522DriverPinSimple ss_pin(10); // Configurable, see typical pin layout above
 MFRC522DriverSPI driver{ss_pin}; // Create SPI driver.
 MFRC522 mfrc522{driver};  // Create MFRC522 instance.
 
-t_terminalStates TerminalState = OFFLINE_ENTRY;
+t_terminalStates TerminalState = WAIT_CARD_ENTRY;
 t_terminalStatus TerminalStatus;
 t_refueling Refueling;
 t_chipcard chipcard;
+
+const char* ntpServer = "pool.ntp.org";
 
 bool cardRemoved = false;
 int counter = 0;
@@ -163,6 +168,16 @@ void initIO() {
 
 }
 
+void printLocalTime()
+{
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    ESP_LOGI("TIME","No time available (yet)");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+}
+
 void io_UpdateStatus(t_terminalStatus tstatus, t_terminalStates tstates)
 {
   if (tstates == WAIT_CARD)
@@ -186,26 +201,61 @@ void updateStatus(void * paramter)
 {
   for(;;)
   {
-    if (TerminalState == SEND_DATA_ENTRY || TerminalState == SEND_DATA)
+    if (TerminalState == WAIT_CARD)
     {
-      ESP_LOGV("Status Update", "Update Status - SUSPENDED");
-      heartbeat_suspended++;  
-    }    
-    else
-    {
+      // Terminal in IDLE State => Do housekeeping tasks
       checkConnection(&TerminalStatus);
       checkWifi(&TerminalStatus);
-
-    //TerminalStatus.wifi = 1;
-    //TerminalStatus.connecsted = 1;
-
-    if (!TerminalStatus.wifi || !TerminalStatus.connected)
-      TerminalState=OFFLINE_ENTRY;
 
       ESP_LOGV("Staus Update","Update Status");
       unsigned int temp = uxTaskGetStackHighWaterMark(nullptr);
       ESP_LOGV("Status Update", "Suspended cntr: %d", heartbeat_suspended);
+
+      // Update number of cached Refuelings
+      TerminalStatus.cachedRefuelings = numberOfRefuelingFiles();
+
+      // Handle cache refuelings if Terminal is ONLINE again
+      if (TerminalStatus.connected)
+      {
+        // Check if there are cached refuelings for upload
+        if (TerminalStatus.cachedRefuelings > 0)
+        {
+          char fileName[12];
+          char data[200];
+          // Get next filename
+          if (getNextRefuelingFileName(fileName))
+          {
+            ESP_LOGD("CACHE","Next filename to send: %s", fileName);
+          
+            // Read file content
+            getRefuelingFileContent(fileName, (unsigned char*) data);
+            ESP_LOGD("CACHE", "Content: %s", data);
+
+            // Send content to cloud
+            if (SendRefueling(data))
+            {
+              // Send sucessfull 
+              ESP_LOGD("CACHE", "Send sucessful!");
+              // Delete file in Flash
+              if (!deleteRefuelingFile(fileName))
+              {
+                // Deletion of refueling file NOT sucessful! => SUSPEND TERMINAL
+                TerminalState = OFFLINE_ENTRY;
+              }
+            }
+          }
+        }
+      }
+    } 
+
+    else
+    {
+      // Terminal NOT IDLE
+      ESP_LOGV("Status Update", "Update Status - SUSPENDED");
+      heartbeat_suspended++;  
     }
+
+    //printLocalTime();
     vTaskDelay(Config.heartbeat / portTICK_PERIOD_MS);
   }
 }
@@ -233,16 +283,24 @@ void print_reset_reason(int reason)
   }
 }
 
+
 void setup() {
 
   Serial.begin(115200); // Initialize serial communications with the PC for debugging.
+  
+  // Init Filesystem
+  init_FS();
+
+  // Set Logging to File
+  ESP_LOGI("LOG", "Redirect logging to file");
+  esp_log_set_vprintf(vprintf_into_fs);
+
 
   rebootReason = rtc_get_reset_reason(0);
   TerminalStatus.rebootReason = rebootReason;
   TerminalStatus.rebooted = true;
   print_reset_reason(rebootReason);
-  init_FS();
-
+  
   ESP_LOGI("Config", "Loading Configuration ...");
   loadConfiguration(filename, Config);
   printConfig(Config);
@@ -263,7 +321,14 @@ void setup() {
   String localIP = WiFi.localIP().toString();
   localIP.toCharArray(&TerminalStatus.s_IP[0], 16);
   lcd_ShowIP(&TerminalStatus.s_IP[0]);
+  // init time
+  lcd_NTP();
+  configTime(0,0,ntpServer);
+
   delay(2000);
+  
+  delay(1000);
+  printLocalTime();
 
   configureWebServer(&server);
 
@@ -425,23 +490,24 @@ void loop() {
   static int sm_counter=0;
   static int state_delay=0;
   static int pump_timeout=0;
-  static int httpResult;
+  static int result;
+  struct tm timeinfo;
 
   switch(TerminalState) {
     case OFFLINE_ENTRY:
       TerminalState = OFFLINE;
-      lcd_OfflineMessage();
+      lcd_OfflineMessage(TerminalStatus);
       lcd_Backlight(1);
     break;
 
     case OFFLINE:
-      if (TerminalStatus.connected && TerminalStatus.wifi)
-        TerminalState = WAIT_CARD_ENTRY;
-      else
-      {
-        TerminalState = OFFLINE;
-        TerminalStatus.status = connection_error;
-      }
+      //if (TerminalStatus.connected && TerminalStatus.wifi)
+      //  TerminalState = WAIT_CARD_ENTRY;
+      //else
+      //{
+      //  TerminalState = OFFLINE;
+      //  TerminalStatus.status = connection_error;
+      //}
         
     break;
 
@@ -602,10 +668,28 @@ void loop() {
 
     case SEND_DATA:
 
-      // Send Data to Cloud
-      httpResult = SendRefueling(Refueling);
-      ESP_LOGV("HTTP", "HTTP Response %d", httpResult);
-      ESP_LOGD("SM", "Data sent to Cloud");
+      // Process data
+      char data[200];
+      // Get current date
+      getLocalTime(&timeinfo);
+      strftime(Refueling.date, sizeof(Refueling.date), "%d.%m.%Y", &timeinfo);
+      ProcessRefueling(Refueling, data);
+
+      // Check if Terminal is online to send data directly
+      if(TerminalStatus.connected)
+      {
+        ESP_LOGV("DATA", "Terminal ONLINE => Send data to cloud");
+        // Send Data to Cloud
+        result = SendRefueling(data);
+        ESP_LOGV("HTTP", "HTTP Response %d", result);
+        ESP_LOGD("SM", "Data sent to Cloud");
+      }
+      else
+      {
+        // Store data to filesystem
+        ESP_LOGV("DATA", "Terminal OFFLINE => Store data in flash");
+        result = storeRefueling(data);
+      }
       // Change State
       TerminalState=SHOW_SUMMARY_ENTRY;
     break;
@@ -613,11 +697,11 @@ void loop() {
     case SHOW_SUMMARY_ENTRY:
     ESP_LOGD("SM", "SHOW_SUMMARY_ENTRY");
     // Show LCD Message
-    if (httpResult == 200){
-      lcd_SendDataResult(httpResult);
+    if (result == 1 | result == 2){
+      lcd_SendDataResult(result);
     }
     else{
-      lcd_SendDataResult(httpResult);
+      lcd_SendDataResult(result);
       TerminalStatus.status=blocked;
       //log_i("Set Terminal Status to: %d", TerminalStatus.status);
       while(1);
@@ -660,39 +744,3 @@ void loop() {
   delay(100);
   
 }
-
-
-
-// void initLAN() {
-  
-//   ESP_LOGD("LAN", "Init Ethernet ...");
-
-//   // Reset LAN Chip
-//   pinMode(4, OUTPUT);
-//   digitalWrite(4, 0);
-//   delay(10);
-//   digitalWrite(4,1);
-
-//   Ethernet.init(7);  // Most Arduino shields
-
-//   // try to configure using IP address instead of DHCP:
-//   //Ethernet.begin(mac, ip, myDns);
-//   Ethernet.begin(mac, MYIPADDR, MYDNS, MYGW, MYIPMASK);
-
-//   // Check for Ethernet Hardware
-//   if (Ethernet.hardwareStatus() == EthernetNoHardware)
-//   {
-//     ESP_LOGD("LAN", "Check Ethernet HARDWARE");
-//   }
-
-//   if (Ethernet.linkStatus() == LinkOFF)
-//   {
-//     ESP_LOGD("LAN", "No Link! Check network cable");
-//   }
-  
-//   // give the Ethernet shield a second to initialize:
-//   delay(1000);
-
-//   ESP_LOGD("LAN", "IP: ", Ethernet.localIP());
-
-// }

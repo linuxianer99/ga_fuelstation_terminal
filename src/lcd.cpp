@@ -32,15 +32,20 @@ void lcd_WaitForTransponder(){
 
 void lcd_SendData(){
   lcd.setCursor(0,2);
-  lcd.print("Sending data ...");
+  lcd.print("Processing data ... ");
 }
 
 void lcd_SendDataResult(int result){
   char buffer[16];
   lcd.setCursor(0,2);
-  if (result == 200){
-    lcd.print("Sending data OK!");
+  if (result == 1){
+    lcd.print("Sending data OK!    ");
   }
+  else if (result == 2)
+  {
+    lcd.print("Stored data OK!     ");
+  }
+  
   else{
     lcd.print("                ");
     lcd.setCursor(0,2);
@@ -49,12 +54,20 @@ void lcd_SendDataResult(int result){
   }
 }
 
-void lcd_OfflineMessage()
+void lcd_OfflineMessage(t_terminalStatus s)
 {
   lcd.clear();
   lcd.print("Terminal OFFLINE!");
   lcd.setCursor(0,1);
-  lcd.print("NO Refueling");
+  switch (s.status)
+  {
+    case cache_error:
+      lcd.print("Cache ERROR");
+      break;
+    default:
+      lcd.print("UNKNOWN ERROR");
+      break;
+  }
   lcd.setCursor(0,2);
   lcd.print("Contact Admin!");
 
@@ -83,6 +96,13 @@ void lcd_ShowIP(char *address)
   lcd.setCursor(0,1);
   snprintf(buffer, 20, "IP: %s", address);
   lcd.print(buffer);
+}
+
+void lcd_NTP(void)
+{
+  char buffer[20]; 
+  lcd.setCursor(0,2);
+  lcd.print("Getting time ...");
 }
 
 void lcd_UpdateFuelCount(t_refueling rf)
@@ -125,9 +145,14 @@ void lcd_UpdateStatus(t_refueling rf, t_terminalStatus ts)
   }
 
   // Show Wifi RSSI
-  lcd.setCursor(12,3);
+  lcd.setCursor(6,3);
   char buffer[6];
   snprintf(buffer, 6, "R:%d", ts.wifi_rssi);
+  lcd.print(buffer);
+
+  // Show number of cached refuelings
+  lcd.setCursor(14,3);
+  snprintf(buffer, 2, "%d", ts.cachedRefuelings);
   lcd.print(buffer);
 
   // Show network connetion status

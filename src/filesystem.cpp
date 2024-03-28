@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <FS.h>
+#include "FS.h"
 #include <LittleFS.h>
 
 #include <ArduinoJson.h>
@@ -32,8 +32,57 @@ void init_FS()
     ESP_LOGI("FS", "FS Used: %s", humanReadableSize(LittleFS.usedBytes()));
     ESP_LOGI("FS", "FS Total: %s", humanReadableSize(LittleFS.totalBytes()));
 
+    // check for Refueling Cache directory
+    File dir_rf = LittleFS.open("/rf");
+    if (!dir_rf)
+    {
+        ESP_LOGD("FS", "Cache directory not existing .. ");
+        if(LittleFS.mkdir("/rf"))
+        {
+            ESP_LOGD("FS", "Cache directory created!");
+        }
+        else
+        {
+            ESP_LOGD("FS", "Cache directory NOT created!");
+        }
+    }
+    else
+    {
+        ESP_LOGD("FS","Cache directory already existing.");
+    }
+
 }
 
+int vprintf_into_fs(const char* szFormat, va_list args)
+{   
+    static char log_print_buffer[512];
+    //write evaluated format string into buffer
+	int ret = vsnprintf (log_print_buffer, sizeof(log_print_buffer), szFormat, args);
+
+	//output is now in buffer. write to file.
+	if(ret >= 0)
+    {
+        if(!LittleFS.exists("/log.txt"))
+        {
+            File writeLog = LittleFS.open("/log.txt", FILE_WRITE);
+            if(!writeLog)
+            { 
+                Serial.println("Couldn't open spiffs_log.txt");
+            }
+            delay(50);
+            writeLog.close();
+        }
+    
+		File LogFile = LittleFS.open("/log.txt", FILE_APPEND);
+		//debug output
+		//printf("[Writing to SPIFFS] %.*s", ret, log_print_buffer);
+		LogFile.write((uint8_t*) log_print_buffer, (size_t) ret);
+		//to be safe in case of crashes: flush the output
+		LogFile.flush();
+		LogFile.close();
+	}
+	return ret; 
+}
 
 void saveConfiguration(const char *filename, const t_Config &config) {
   
@@ -264,4 +313,121 @@ void printFile(const char *filename) {
 
   // Close the file
   file.close();
+}
+
+
+// Generate random filename
+void generateFilename(char *filename)
+{
+    int i;
+    char seed[]="abcdefghijklmnopqrstuvwxyz";
+    char rand[8];
+
+    filename[0]='/';
+    filename[1]='r';
+    filename[2]='f';
+    filename[3]='/';
+
+    for (i=4; i<11; i++)
+    {   
+        filename[i] = seed[random(0,27)];
+    }
+    filename[11]='\0';
+}
+
+
+// Get number of Refueling Files in flash
+int numberOfRefuelingFiles()
+{
+    int numberOfFiles=0;
+    File dir_rf = LittleFS.open("/rf/");
+    if(!dir_rf){
+        ESP_LOGE("CACHE", "failed to open directory");
+        return -1;
+    }
+    File file = dir_rf.openNextFile();
+    while(file)
+    {
+        ESP_LOGD("CACHE", "found file: %s", file.name());
+        numberOfFiles++;
+        file = dir_rf.openNextFile();
+    } 
+    return numberOfFiles;
+}
+
+int getNextRefuelingFileName(char *fileName)
+{
+    File dir_rf = LittleFS.open("/rf/");
+    if(!dir_rf){
+        ESP_LOGE("CACHE", "failed to open directory");
+        return 0;
+    }
+    File file = dir_rf.openNextFile();
+    while(file)
+    {   
+        if (!file.isDirectory())
+        {
+            ESP_LOGD("CACHE", "found file: %s", file.name());
+            strcpy(fileName, file.path());
+            return 1;
+        }     
+    }
+    return 0;
+}
+
+// Get content of refueling file if existent
+int getRefuelingFileContent(const char * path, unsigned char* content)
+{
+    File file = LittleFS.open(path);
+    if(!file || file.isDirectory())
+    {
+        ESP_LOGD("FS","- failed to open file for reading");
+        return -1;
+    }
+    file.read(content,file.size());
+    file.close();
+    return 1;
+}
+
+// Store a Refueling in flash
+int storeRefueling(char* data)
+{
+    char filename[12];
+    int result;
+
+    // Generate unique filename
+    do
+    {
+        generateFilename(filename);
+    } while (LittleFS.exists(filename));
+
+    ESP_LOGI("FS", "Save refueling %s", filename);
+    // Open file for writing
+    File file = LittleFS.open(filename, FILE_WRITE);
+    if (!file) {
+        ESP_LOGE("FS", "Failed to create file");
+        result=0;
+    }
+
+    // Write data to file
+    if (file.print(data))
+    {
+        result=2;
+    }
+    file.close();
+    return result;
+}
+
+int deleteRefuelingFile(char *fileName)
+{
+    if(LittleFS.remove(fileName))
+    {
+        ESP_LOGD("FS","File %s removed", fileName);
+        return 1;
+    } 
+    else
+    {
+        ESP_LOGD("FS","File %s NOT removed", fileName);
+        return 0;
+    }
 }

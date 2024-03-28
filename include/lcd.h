@@ -9,5 +9,6 @@ void lcd_UpdateFuelCount(t_refueling);
 void lcd_ShowCount();
 void lcd_SendData();
 void lcd_SendDataResult(int);
-void lcd_OfflineMessage();
+void lcd_OfflineMessage(t_terminalStatus s);
 void lcd_Backlight(int);
+void lcd_NTP();

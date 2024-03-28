@@ -1,4 +1,10 @@
 void init_FS();
+int vprintf_into_fs(const char* szFormat, va_list args);
 void loadConfiguration(const char *filename, t_Config &config);
 void printConfig(t_Config &config);
+int storeRefueling(char*);
+int numberOfRefuelingFiles();
+int getNextRefuelingFileName(char *);
+int getRefuelingFileContent(const char * path, unsigned char* content);
+int deleteRefuelingFile(char *fileName);
 String listFiles(bool ishtml);

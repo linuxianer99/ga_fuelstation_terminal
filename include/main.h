@@ -21,13 +21,15 @@ enum t_status{
   connection_error,
   blocked,
   waitcard,
-  pumpon
+  pumpon,
+  cache_error
 };
 
 typedef struct {
     char aircraft[20];        // Callsign of the aircraft
     char article[20];  // Article
     char memberid[10];
+    char date[11];
     float amount;
 } t_refueling;
 
@@ -42,6 +44,7 @@ typedef struct  {
   bool rebooted;
   enum t_status status;
   uint32_t freeHeap;
+  int cachedRefuelings;
 } t_terminalStatus;
 
 

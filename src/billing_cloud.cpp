@@ -5,14 +5,13 @@
 #include "config.h"
 #include <ArduinoJson.h>
 #include <Crypto.h>
-#include "base64.hpp"
 #include "ca.hpp"
 
 
 
 extern t_Config Config;
 
-int SendRefueling(t_refueling Refueling)
+int SendRefueling(char* data)
 {   
     WiFiClientSecure *client = new WiFiClientSecure;
     if(client) {
@@ -21,56 +20,20 @@ int SendRefueling(t_refueling Refueling)
         //create an HTTPClient instance
         HTTPClient https;
     
-
-        String requestBody;
-        StaticJsonDocument<200> doc;
         int retry_count=10;
         int httpResponseCode;
 
-        #define KEY_LENGTH 16
-
-        /* Define our key*/
-        byte base64_key[24];
-        byte key[KEY_LENGTH];
-        Config.billingkey.getBytes(base64_key, 24);
-        decode_base64(base64_key, key);
-
-        char s_amount[6];
-        unsigned char base64[32];
-        snprintf(s_amount,6,"%.1f", Refueling.amount);
-
-
-        // Calculate HMAC for message
-        SHA256HMAC hmac(key, KEY_LENGTH);
-        /* Update the HMAC with just a plain string (null terminated) */
-        hmac.doUpdate(Refueling.aircraft);
-        hmac.doUpdate(Refueling.memberid);
-        hmac.doUpdate(s_amount);
-        hmac.doUpdate(Refueling.article);
-        byte authCode[SHA256HMAC_SIZE];
-        hmac.doFinal(authCode);
-
-        unsigned int base64_length = encode_base64(authCode, 32, base64);
-        ESP_LOGD("Billing", "Base64: %s Length: %d", base64, base64_length);
-
-        // Add data
-        doc["aircraft"] = Refueling.aircraft;
-        doc["amount"] = s_amount;
-        doc["article"] = Refueling.article;
-        doc["memberid"] = Refueling.memberid;
-        doc["auth"] = base64;
-        serializeJson(doc, requestBody);
-        ESP_LOGD("Billing", "Message: %s", requestBody);
+        ESP_LOGD("Billing", "Message: %s", data);
         
         while (retry_count)
         {
-            ESP_LOGD("Billing", "Try to connect billing server %s", Config.billingserver.c_str() + Config.terminal_id);
+            ESP_LOGD("Billing", "Try to connect billing server %s", (Config.billingserver + Config.terminal_id).c_str());
             // Handle retry counter
             retry_count--;
             // Try http POST
             https.begin(*client, Config.billingserver + "/" + Config.terminal_id);
             https.addHeader("Content-Type", "application/json");
-            httpResponseCode = https.POST(requestBody);
+            httpResponseCode = https.POST(data);
             ESP_LOGD("Billing", "Server Respone %d", httpResponseCode);
             https.end();
             client->stop();
@@ -78,18 +41,18 @@ int SendRefueling(t_refueling Refueling)
 
             if (httpResponseCode == 200){
                 // Transfer successful    
-                return httpResponseCode;
+                return 1;
             }
             else if (httpResponseCode == 403)
             {
-                return httpResponseCode;
+                return 403;
             }
         }
         // Transfer not successful!!
         ESP_LOGE("Billing", "Http Transfer not successful!");
-        return(httpResponseCode);
+        return(99);
     }
-    return(1);
+    return(98);
 }
 
 
@@ -119,7 +82,7 @@ void checkConnection(t_terminalStatus *ts)
         doc["rssi"] = ts->wifi_rssi;
         ESP_LOGD("Billing", "Status: %d", ts->status);
         serializeJson(doc, requestBody);
-        ESP_LOGD("Billing", "Message: %s", requestBody);
+        ESP_LOGD("Billing", "Message: %s", requestBody.c_str());
 
         https.begin(*client, Config.billingserver + "/" + Config.terminal_id + "/status");
         //https.begin(Config.billingserver + "/" + Config.terminal_id + "/status");

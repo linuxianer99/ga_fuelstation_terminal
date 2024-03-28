@@ -1,4 +1,5 @@
 #include "main.h"
+#include <Arduino.h>
 
-int SendRefueling(t_refueling Refueling);
+int SendRefueling(char*);
 void checkConnection(t_terminalStatus *);
