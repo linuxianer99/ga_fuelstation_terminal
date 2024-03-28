@@ -229,6 +229,7 @@ void configureWebServer(AsyncWebServer *server) {
          // Add data
         doc["b"] = TerminalStatus.connected;
         doc["t"] = TerminalStatus.status;
+        doc["c"] = TerminalStatus.cachedRefuelings;
         serializeJson(doc, requestBody);
         request->send(200, "application/json", requestBody);
     });

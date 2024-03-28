@@ -26,6 +26,8 @@
       <th>Backend Connection: <span id="backend_state"></span></th>
       <th width="60px">&nbsp;</th>
       <th>Terminal State: <span id="terminal_state"></span></th>
+      <th width="60px">&nbsp;</th>
+      <th>Cached Refuelings: <span id="cached_refuelings"></span></th>
     </tr>
   </table>
   <hr>
@@ -50,9 +52,9 @@
       // work with json here
       console.log(data);
       backend_state.innerHTML = data.b;
-
       const status = ["normal","connection_error","blocked","waitcard","pumpon"];
       terminal_state.innerHTML = status[data.t];
+      cached_refuelings.innerHTML = data.c;
     }).catch(err => {
       console.log("Error");
     });
