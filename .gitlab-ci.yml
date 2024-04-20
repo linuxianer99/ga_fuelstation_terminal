@@ -6,7 +6,7 @@ cache:
     - ~/.platformio/.cache
 
 stages:
- - build_debug
+ - build_release
  #- build
  #- release
 
