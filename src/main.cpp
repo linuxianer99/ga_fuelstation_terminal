@@ -199,15 +199,30 @@ void io_UpdateStatus(t_terminalStatus tstatus, t_terminalStates tstates)
 
 void updateStatus(void * paramter)
 {
+  int previous_ts_connected = 0;
+  int previous_ts_wifi = 0;
+
   for(;;)
   {
     if (TerminalState == WAIT_CARD)
     {
       // Terminal in IDLE State => Do housekeeping tasks
+      previous_ts_connected = TerminalStatus.connected;
+      previous_ts_wifi = TerminalStatus.wifi;
       checkConnection(&TerminalStatus);
       checkWifi(&TerminalStatus);
 
-      ESP_LOGV("Staus Update","Update Status");
+      // Log state changes
+      if (
+        (previous_ts_connected  != TerminalStatus.connected) || 
+        (previous_ts_wifi != TerminalStatus.wifi)
+        )
+      {
+        ESP_LOGE("Status Update","CHANGE: Backend %d => %d, Wifi %d => %d", 
+          previous_ts_connected, TerminalStatus.connected, previous_ts_wifi, TerminalStatus.wifi);
+      } 
+
+      ESP_LOGV("Status Update","Update Status");
       unsigned int temp = uxTaskGetStackHighWaterMark(nullptr);
       ESP_LOGV("Status Update", "Suspended cntr: %d", heartbeat_suspended);
 
@@ -516,7 +531,7 @@ void loop() {
       lcd_WaitForTransponder();
       TerminalState=WAIT_CARD;
       TerminalStatus.status = waitcard;
-#ifdef BACKLIGHT_DIM
+#ifndef TESTMODE
       lcd_Backlight(0);
 #endif
     break;
@@ -612,11 +627,14 @@ void loop() {
       TerminalStatus.pump=1;
 
       // Count fuel 
-      // insert code here
       int16_t amount;
       pcnt_get_counter_value(PCNT_UNIT_0, &amount);
       ESP_LOGD("SM", "Counter: %d, MultPulses: %d, Total Pulses: %d", amount,multPulses, (multPulses * PCNT_H_LIM_VAL + amount));
+#ifdef TESTMODE
+      Refueling.amount = Refueling.amount + 0.01;
+#else
       Refueling.amount = (float)(multPulses * PCNT_H_LIM_VAL + amount) / (float)Config.calibration;
+#endif
       ESP_LOGD("SM", "Fuel %f", Refueling.amount);
       
       lcd_UpdateFuelCount(Refueling);
