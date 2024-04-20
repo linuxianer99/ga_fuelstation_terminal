@@ -125,6 +125,7 @@ void lcd_Backlight(int status)
 void lcd_UpdateStatus(t_refueling rf, t_terminalStatus ts)
 {
   char pump[]={0x2d,0x5c,0x7c,0x2f};
+  char buffer[6];
   static int index=0;
 
   // Show pump on status
@@ -146,9 +147,15 @@ void lcd_UpdateStatus(t_refueling rf, t_terminalStatus ts)
 
   // Show Wifi RSSI
   lcd.setCursor(6,3);
-  char buffer[6];
-  snprintf(buffer, 6, "R:%d", ts.wifi_rssi);
-  lcd.print(buffer);
+  if (ts.wifi)
+  {
+    snprintf(buffer, 6, "R:%d", ts.wifi_rssi);
+    lcd.print(buffer);
+  }
+  else
+  {
+    lcd.print("R:N/A");
+  }
 
   // Show number of cached refuelings
   lcd.setCursor(14,3);
@@ -164,10 +171,6 @@ void lcd_UpdateStatus(t_refueling rf, t_terminalStatus ts)
   else
   {
     lcd.write('n');
-    lcd.setCursor(7,3);
-    char buffer[3];
-    snprintf(buffer, 3, "%d", ts.wifi_state);
-    lcd.print(buffer);
   }
 
   // Show Server connection status
