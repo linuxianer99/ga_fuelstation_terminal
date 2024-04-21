@@ -11,7 +11,7 @@
 
 extern t_Config Config;
 
-int SendRefueling(char* data)
+int SendRefueling(JsonDocument &doc)
 {   
     WiFiClientSecure *client = new WiFiClientSecure;
     if(client) {
@@ -22,8 +22,6 @@ int SendRefueling(char* data)
     
         int retry_count=10;
         int httpResponseCode;
-
-        ESP_LOGD("Billing", "Message: %s", data);
         
         while (retry_count)
         {
@@ -33,6 +31,9 @@ int SendRefueling(char* data)
             // Try http POST
             https.begin(*client, Config.billingserver + "/" + Config.terminal_id);
             https.addHeader("Content-Type", "application/json");
+            String data;
+            serializeJson(doc, data);
+            ESP_LOGD("Billing", "Message: %s", data.c_str());
             httpResponseCode = https.POST(data);
             ESP_LOGD("Billing", "Server Respone %d", httpResponseCode);
             https.end();
@@ -60,7 +61,7 @@ void checkConnection(t_terminalStatus *ts)
 {
     int httpResponseCode;
     String requestBody;
-    StaticJsonDocument<200> doc;
+    JsonDocument doc;
 
     WiFiClientSecure *client = new WiFiClientSecure;
     
@@ -83,9 +84,8 @@ void checkConnection(t_terminalStatus *ts)
         ESP_LOGD("Billing", "Status: %d", ts->status);
         serializeJson(doc, requestBody);
         ESP_LOGD("Billing", "Message: %s", requestBody.c_str());
-
         https.begin(*client, Config.billingserver + "/" + Config.terminal_id + "/status");
-        //https.begin(Config.billingserver + "/" + Config.terminal_id + "/status");
+        
         // Send HTTP GET request
         https.addHeader("Content-Type", "application/json");
         httpResponseCode = https.POST(requestBody);

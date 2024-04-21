@@ -3,6 +3,7 @@
 #include <main.h>
 #include <string.h>
 #include <Wire.h>
+#include <ArduinoJson.h>
 
 #include <lcd.h>
 #include <LiquidCrystal_I2C.h>
@@ -201,6 +202,7 @@ void updateStatus(void * paramter)
 {
   int previous_ts_connected = 0;
   int previous_ts_wifi = 0;
+  JsonDocument doc;
 
   for(;;)
   {
@@ -243,21 +245,24 @@ void updateStatus(void * paramter)
             ESP_LOGD("CACHE","Next filename to send: %s", fileName);
           
             // Read file content
-            getRefuelingFileContent(fileName, (unsigned char*) data);
-            ESP_LOGD("CACHE", "Content: %s", data);
-
+            readRefuelingFile(fileName, doc);
+#ifdef DEBUG
+            String output;
+            serializeJson(doc , output);
+            ESP_LOGD("CACHE", "Content: %s", output.c_str());
+#endif
             // Send content to cloud
-            if (SendRefueling(data))
+            if (SendRefueling(doc))
             {
-              // Send sucessfull 
-              ESP_LOGD("CACHE", "Send sucessful!");
-              // Delete file in Flash
-              if (!deleteRefuelingFile(fileName))
-              {
-                // Deletion of refueling file NOT sucessful! => SUSPEND TERMINAL
-                TerminalState = OFFLINE_ENTRY;
-              }
-            }
+               // Send sucessfull 
+               ESP_LOGD("CACHE", "Send sucessful!");
+               // Delete file in Flash
+               if (!deleteRefuelingFile(fileName))
+               {
+                 // Deletion of refueling file NOT sucessful! => SUSPEND TERMINAL
+                 TerminalState = OFFLINE_ENTRY;
+               }
+             }
           }
         }
       }
@@ -507,6 +512,7 @@ void loop() {
   static int pump_timeout=0;
   static int result;
   struct tm timeinfo;
+  JsonDocument doc;
 
   switch(TerminalState) {
     case OFFLINE_ENTRY:
@@ -687,18 +693,17 @@ void loop() {
     case SEND_DATA:
 
       // Process data
-      char data[200];
       // Get current date
       getLocalTime(&timeinfo);
       strftime(Refueling.date, sizeof(Refueling.date), "%d.%m.%Y", &timeinfo);
-      ProcessRefueling(Refueling, data);
+      ProcessRefueling(Refueling, doc);
 
       // Check if Terminal is online to send data directly
       if(TerminalStatus.connected)
       {
         ESP_LOGV("DATA", "Terminal ONLINE => Send data to cloud");
         // Send Data to Cloud
-        result = SendRefueling(data);
+        result = SendRefueling(doc);
         ESP_LOGV("HTTP", "HTTP Response %d", result);
         ESP_LOGD("SM", "Data sent to Cloud");
       }
@@ -706,7 +711,7 @@ void loop() {
       {
         // Store data to filesystem
         ESP_LOGV("DATA", "Terminal OFFLINE => Store data in flash");
-        result = storeRefueling(data);
+        result = storeRefueling(doc);
       }
       // Change State
       TerminalState=SHOW_SUMMARY_ENTRY;
@@ -729,7 +734,6 @@ void loop() {
       // Change State
       TerminalState=SHOW_SUMMARY;
     break;
-      
 
     case SHOW_SUMMARY:
       if (state_delay > 0){

@@ -376,7 +376,7 @@ int getNextRefuelingFileName(char *fileName)
 }
 
 // Get content of refueling file if existent
-int getRefuelingFileContent(const char * path, unsigned char* content)
+int readRefuelingFile(const char * path, JsonDocument &doc)
 {
     File file = LittleFS.open(path);
     if(!file || file.isDirectory())
@@ -384,13 +384,13 @@ int getRefuelingFileContent(const char * path, unsigned char* content)
         ESP_LOGD("FS","- failed to open file for reading");
         return -1;
     }
-    file.read(content,file.size());
+    deserializeJson(doc, file);
     file.close();
     return 1;
 }
 
 // Store a Refueling in flash
-int storeRefueling(char* data)
+int storeRefueling(JsonDocument &doc)
 {
     char filename[12];
     int result;
@@ -410,7 +410,7 @@ int storeRefueling(char* data)
     }
 
     // Write data to file
-    if (file.print(data))
+    if (serializeJson(doc, file))
     {
         result=2;
     }
@@ -418,6 +418,7 @@ int storeRefueling(char* data)
     return result;
 }
 
+// Delete a Refueling file from flash
 int deleteRefuelingFile(char *fileName)
 {
     if(LittleFS.remove(fileName))

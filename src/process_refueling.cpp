@@ -7,9 +7,8 @@
 
 extern t_Config Config;
 
-int ProcessRefueling(t_refueling Refueling, char *data){
+int ProcessRefueling(t_refueling Refueling, JsonDocument& doc){
     
-    StaticJsonDocument<200> doc;
     int retry_count=10;
     int httpResponseCode;
 
@@ -48,7 +47,10 @@ int ProcessRefueling(t_refueling Refueling, char *data){
     doc["date"] = Refueling.date;
     doc["memberid"] = Refueling.memberid;
     doc["auth"] = base64;
-    serializeJson(doc, data, 200);
-    ESP_LOGD("Billing", "Message: %s", data);
+#ifdef DEBUG
+    String output;
+    serializeJson(doc, output);
+    ESP_LOGD("Billing", "Message: %s", output.c_str());
+#endif
     return 1;
 }
