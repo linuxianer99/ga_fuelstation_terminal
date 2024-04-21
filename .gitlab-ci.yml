@@ -40,6 +40,7 @@ build_release:
     GIT_STRATEGY: clone
   script: 
     - "pio run -e FuelStationHardware_RELEASE -d $CI_PROJECT_DIR"
+    - "pio run -e FuelStationHardware_RELEASE --target buildfs -d $CI_PROJECT_DIR"
     - pwd
     - ls -al
     - mkdir -p $CI_PROJECT_DIR/artifacts
