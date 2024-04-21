@@ -288,11 +288,11 @@ void loadConfiguration(const char *filename, t_Config &config) {
 
 
 void printConfig(t_Config &config) {
-  ESP_LOGI("FS", "         terminal id: %s", config.terminal_id);
-  ESP_LOGI("FS", "              device: %s", config.device);
-  ESP_LOGI("FS", "                ssid: %s", config.ssid);
-  ESP_LOGI("FS", "        wifipassword: %s", config.wifipassword);
-  ESP_LOGI("FS", "            fuelsort: %s", config.fuelsort);
+  ESP_LOGI("FS", "         terminal id: %s", config.terminal_id.c_str());
+  ESP_LOGI("FS", "              device: %s", config.device.c_str());
+  ESP_LOGI("FS", "                ssid: %s", config.ssid.c_str());
+  ESP_LOGI("FS", "        wifipassword: %s", config.wifipassword.c_str());
+  ESP_LOGI("FS", "            fuelsort: %s", config.fuelsort.c_str());
   ESP_LOGI("FS", "         calibration: %f", config.calibration);
   ESP_LOGI("FS", "        pump timeout: %d", config.pump_timeout);
 

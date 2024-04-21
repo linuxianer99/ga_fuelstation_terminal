@@ -313,9 +313,7 @@ void setup() {
 
   // Set Logging to File
   ESP_LOGI("LOG", "Redirect logging to file");
-  esp_log_set_vprintf(vprintf_into_fs);
-
-
+  
   rebootReason = rtc_get_reset_reason(0);
   TerminalStatus.rebootReason = rebootReason;
   TerminalStatus.rebooted = true;
