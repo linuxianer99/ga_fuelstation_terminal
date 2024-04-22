@@ -2,6 +2,9 @@
 #include "FS.h"
 #include <LittleFS.h>
 
+#include <stdio.h>
+//#include <stdarg.h>
+
 #include <ArduinoJson.h>
 #include "defaults.h"
 #include "config.h"
@@ -53,10 +56,17 @@ void init_FS()
 
 }
 
-int vprintf_into_fs(const char* szFormat, va_list args)
+int vprintf_into_fs(const char* szFormat, ...)
 {   
     static char log_print_buffer[512];
+    static char timestamp[23];
+    struct tm timeinfo;
+    va_list args;
+    va_start (args, szFormat);
+
     //write evaluated format string into buffer
+    getLocalTime(&timeinfo);
+    int ret_timestamp = strftime(timestamp, sizeof(timestamp), "[%F %T] ", &timeinfo);
 	int ret = vsnprintf (log_print_buffer, sizeof(log_print_buffer), szFormat, args);
 
 	//output is now in buffer. write to file.
@@ -74,14 +84,15 @@ int vprintf_into_fs(const char* szFormat, va_list args)
         }
     
 		File LogFile = LittleFS.open("/log.txt", FILE_APPEND);
-		//debug output
-		//printf("[Writing to SPIFFS] %.*s", ret, log_print_buffer);
+        
+        LogFile.write((uint8_t*) timestamp, (size_t) ret_timestamp);
 		LogFile.write((uint8_t*) log_print_buffer, (size_t) ret);
 		//to be safe in case of crashes: flush the output
 		LogFile.flush();
 		LogFile.close();
+        va_end (args);
 	}
-	return ret; 
+	return (ret+ret_timestamp); 
 }
 
 void saveConfiguration(const char *filename, const t_Config &config) {

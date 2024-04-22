@@ -220,6 +220,8 @@ void updateStatus(void * paramter)
         (previous_ts_wifi != TerminalStatus.wifi)
         )
       {
+        vprintf_into_fs("Status CHANGE: Backend %d => %d, Wifi %d => %d\n", 
+          previous_ts_connected, TerminalStatus.connected, previous_ts_wifi, TerminalStatus.wifi);
         ESP_LOGE("Status Update","CHANGE: Backend %d => %d, Wifi %d => %d", 
           previous_ts_connected, TerminalStatus.connected, previous_ts_wifi, TerminalStatus.wifi);
       } 
@@ -246,7 +248,7 @@ void updateStatus(void * paramter)
           
             // Read file content
             readRefuelingFile(fileName, doc);
-#ifdef DEBUG
+#ifdef DEBUGMODE
             String output;
             serializeJson(doc , output);
             ESP_LOGD("CACHE", "Content: %s", output.c_str());
@@ -342,11 +344,13 @@ void setup() {
   // init time
   lcd_NTP();
   configTime(0,0,ntpServer);
-
-  delay(2000);
-  
-  delay(1000);
   printLocalTime();
+
+  // SLog
+  vprintf_into_fs("SystemStartup\n");
+
+  // Log system start here
+  delay(2000);
 
   configureWebServer(&server);
 

@@ -30,6 +30,7 @@
   </table>
   <hr>
   <input type="button" onclick="location.href='/update';" value="OTA Update" />
+  <button onclick="listFilesButton()">List Files</button>
   <button onclick="logoutButton()">Logout Web Admin</button>
   <button onclick="rebootButton()">Reboot</button>
   <hr>
@@ -40,6 +41,10 @@
     <p><b>Cached Refueling Section</b></p>
     <p>Cached Refuelings: <span id="cached_refuelings"></span></p>
     <p><button onclick="deleteCachedRefuelings()">Delete cache</button></p>
+  <hr>
+    <p><b>Logging Section</b></p>
+    <button onclick="downloadDeleteButton('/log.txt', 'download')">Get Log</button>
+    <button onclick="downloadDeleteButton('/log.txt', 'delete')">Delete Log</button>
   <hr>
     <p>Status: <span id="statusdetails"></span></p>
   <hr>

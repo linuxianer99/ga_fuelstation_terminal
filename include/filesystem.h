@@ -1,5 +1,5 @@
 void init_FS();
-int vprintf_into_fs(const char* szFormat, va_list args);
+int vprintf_into_fs(const char* szFormat, ...);
 void loadConfiguration(const char *filename, t_Config &config);
 void printConfig(t_Config &config);
 int storeRefueling(JsonDocument &);

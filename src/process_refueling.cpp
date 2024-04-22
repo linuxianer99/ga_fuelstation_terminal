@@ -47,7 +47,7 @@ int ProcessRefueling(t_refueling Refueling, JsonDocument& doc){
     doc["date"] = Refueling.date;
     doc["memberid"] = Refueling.memberid;
     doc["auth"] = base64;
-#ifdef DEBUG
+#ifdef DEBUGMODE
     String output;
     serializeJson(doc, output);
     ESP_LOGD("Billing", "Message: %s", output.c_str());
