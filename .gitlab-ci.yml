@@ -47,10 +47,13 @@ build_release:
     - ls .pio/build/FuelStationHardware_RELEASE
     - cp .pio/build/FuelStationHardware_RELEASE/GA_FUEL_TERMINAL*.elf $CI_PROJECT_DIR/artifacts
     - cp .pio/build/FuelStationHardware_RELEASE/GA_FUEL_TERMINAL*.bin $CI_PROJECT_DIR/artifacts
+    - cp .pio/build/FuelStationHardware_RELEASE/littlefs.bin $CI_PROJECT_DIR/artifacts
     - ls -al $CI_PROJECT_DIR/artifacts/
   artifacts:
     paths:
     - artifacts/GA_FUEL_TERMINAL*.bin
+    - artifacts/GA_FUEL_TERMINAL*.elf
+    - artifacts/littlefs.bin
 
 #release:
 #  stage: release
