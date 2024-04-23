@@ -5,6 +5,7 @@
 #include <Wire.h>
 #include <ArduinoJson.h>
 
+#include <ElegantOTA.h>
 #include <lcd.h>
 #include <LiquidCrystal_I2C.h>
 
@@ -746,6 +747,10 @@ void loop() {
         TerminalState=WAIT_CARD_ENTRY;
       }
     break;
+
+    case OTA:
+      lcd_ShowOTA();
+      break;
   }
 
   //log_i("Loop running on core: %d", xPortGetCoreID());
@@ -754,6 +759,9 @@ void loop() {
   lcd_UpdateStatus(Refueling, TerminalStatus);
   //delay(500); //change value if you want to read cards faster
   
+  // Trigger reboot if OTA is finished
+  ElegantOTA.loop();
+
   if (shouldReboot)
   {
     ESP.restart();

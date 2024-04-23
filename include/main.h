@@ -13,7 +13,8 @@ enum t_terminalStates {
   SEND_DATA_ENTRY, // Send the data of the refueling to the cloud
   SEND_DATA, // Send the data of the refueling to the cloud
   SHOW_SUMMARY_ENTRY,
-  SHOW_SUMMARY // Show Summary
+  SHOW_SUMMARY, // Show Summary
+  OTA //
 };
 
 enum t_status{

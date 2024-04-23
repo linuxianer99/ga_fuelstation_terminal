@@ -203,3 +203,10 @@ void lcd_ShowCount()
   lcd.setCursor(0,1);
   lcd.print("Amount:");
 }
+
+void lcd_ShowOTA()
+{
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("OTA in progres ...");
+}

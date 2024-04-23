@@ -12,3 +12,4 @@ void lcd_SendDataResult(int);
 void lcd_OfflineMessage(t_terminalStatus s);
 void lcd_Backlight(int);
 void lcd_NTP();
+void lcd_ShowOTA();

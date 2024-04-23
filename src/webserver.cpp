@@ -1,7 +1,7 @@
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <AsyncElegantOTA.h>
+#include <ElegantOTA.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include "config.h"
@@ -13,6 +13,8 @@ extern t_Config Config;
 extern bool shouldReboot;
 extern t_terminalStates TerminalState;
 extern t_terminalStatus TerminalStatus;
+
+unsigned long ota_progress_millis = 0;
 
 void notFound(AsyncWebServerRequest *request) {
   ESP_LOGE("Web", "Page not found");
@@ -99,6 +101,26 @@ String processor(const String& var) {
   return String();
 }
 
+void onOTAStart() {
+  // Log when OTA has started
+  ESP_LOGI("OTA","OTA update started!");
+  TerminalState == OTA;
+  // <Add your own code here>
+}
+
+void onOTAEnd(bool success) {
+    if (success) {
+        ESP_LOGI("OTA", "OTA finished successful");
+    }
+}
+
+void onOTAProgress(size_t current, size_t final) {
+  // Log every 1 second
+  if (millis() - ota_progress_millis > 1000) {
+    ota_progress_millis = millis();
+    ESP_LOGI("OTA","OTA Progress Current: %u bytes, Final: %u bytes\n", current, final);
+  }
+}
 
 void configureWebServer(AsyncWebServer *server) {
     // configure web server
@@ -119,14 +141,6 @@ void configureWebServer(AsyncWebServer *server) {
             return request->requestAuthentication();
         }
 
-    /*
-      int headers = request->headers();
-      int i;
-      for(i=0;i<headers;i++){
-      AsyncWebHeader* h = request->getHeader(i);
-      Serial.printf("HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
-      }
-    */
         request->send(LittleFS, "/index.html", String(), false, processor);
 
     });
@@ -235,7 +249,9 @@ void configureWebServer(AsyncWebServer *server) {
     });
 
     ESP_LOGI("Web", "Configuring OTA Webserver ...");
-    AsyncElegantOTA.begin(server, Config.httpuser.c_str(), Config.httppassword.c_str());
+    ElegantOTA.begin(server, Config.httpuser.c_str(), Config.httppassword.c_str());
+    ElegantOTA.onProgress(onOTAProgress);
+    ElegantOTA.onEnd(onOTAEnd);
     ESP_LOGI("Web", "Starting Webserver ...");
     server->begin();
 }
