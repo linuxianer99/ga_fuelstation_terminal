@@ -644,6 +644,7 @@ void loop() {
 #else
       Refueling.amount = (float)(multPulses * PCNT_H_LIM_VAL + amount) / (float)Config.calibration;
 #endif
+      Refueling.pulses = multPulses * PCNT_H_LIM_VAL + amount;
       ESP_LOGD("SM", "Fuel %f", Refueling.amount);
       
       lcd_UpdateFuelCount(Refueling);
@@ -700,6 +701,8 @@ void loop() {
       getLocalTime(&timeinfo);
       strftime(Refueling.date, sizeof(Refueling.date), "%d.%m.%Y", &timeinfo);
       ProcessRefueling(Refueling, doc);
+      vprintf_into_fs("Refueling: %s, %f, %d, %s\n", 
+          Refueling.aircraft, Refueling.amount, Refueling.pulses, Refueling.memberid);
 
       // Check if Terminal is online to send data directly
       if(TerminalStatus.connected)

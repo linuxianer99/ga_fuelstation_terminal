@@ -32,6 +32,7 @@ typedef struct {
     char memberid[10];
     char date[11];
     float amount;
+    int pulses;
 } t_refueling;
 
 typedef struct  {
